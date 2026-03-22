@@ -86,6 +86,7 @@ async def review_node(state: ProposalState) -> ProposalState:
     agent = ReviewAgent()
     result = await agent.run(
         {
+            "rfp_brief": state["rfp_brief"],
             "qualification": state["qualification"],
             "solution": state["solution"],
             "compliance": state["compliance"],
@@ -96,7 +97,21 @@ async def review_node(state: ProposalState) -> ProposalState:
     return {"review": result.output, "status": "review"}
 ```
 
-5. **Conditional qualification behavior** — `should_continue` checks `qualified` field only. When `qualified=True` and `recommendation="conditional"`, the pipeline continues — the conditional reasons are passed to Solution and Compliance agents via the `qualification` dict in state, so they can address the conditions in their outputs. When `qualified=False`, pipeline exits early regardless of recommendation. The `errors` field in `ProposalState` is populated with the qualification `missing` list on early exit.
+5. **Conditional qualification behavior** — `should_continue` checks `qualified` field only (routing function, cannot mutate state). When `qualified=True` and `recommendation="conditional"`, the pipeline continues — the conditional reasons are passed to Solution and Compliance agents via the `qualification` dict in state, so they can address the conditions in their outputs. When `qualified=False`, pipeline exits early. The `qualify_node` itself populates `errors` with the `missing` list when `qualified=False`, since LangGraph conditional edge functions are routing-only and cannot modify state:
+
+```python
+async def qualify_node(state: ProposalState) -> ProposalState:
+    agent = QualificationAgent()
+    result = await agent.run(
+        {"rfp_brief": state["rfp_brief"]},
+        proposal_id=state.get("proposal_id"),
+    )
+    update = {"qualification": result.output, "status": "qualified"}
+    if not result.output.get("qualified", True):
+        update["errors"] = result.output.get("missing", [])
+        update["status"] = "disqualified"
+    return update
+```
 
 ## Agent Specifications
 
@@ -192,7 +207,9 @@ The `staffing` array is the structured contract between SolutionAgent and CostAg
 
 **inject_context:** Query `CompanyKnowledge` for types `ratecard`, `rate`. Load hourly/daily rates by role.
 
-**calculate_costs(context) -> dict:** Deterministic Python method called before `build_prompt()`. Reads the structured `staffing` array from SolutionAgent's output, looks up each role's rate from rate card, computes `rate * hours * headcount` per role, sums subtotals, adds margin. Flags any roles missing from rate card. Returns structured cost breakdown dict.
+**calculate_costs(context) -> dict:** Deterministic Python method. Reads the structured `staffing` array from SolutionAgent's output, looks up each role's rate from rate card, computes `rate * hours * headcount` per role, sums subtotals, adds margin. Flags any roles missing from rate card. Returns structured cost breakdown dict.
+
+**Lifecycle hook:** `CostAgent` overrides `inject_context()` to (a) query rate cards from DB, (b) call `calculate_costs()` with the rate data and solution output, and (c) merge the computed cost breakdown into the context dict. By the time `build_prompt()` runs, the pre-computed numbers are already in context.
 
 **build_prompt:** System prompt: cost proposal assembler. User prompt: `rfp_brief` + `solution` output + pre-computed cost breakdown. LLM writes the narrative justification only — does not compute numbers.
 
@@ -225,7 +242,7 @@ The `staffing` array is the structured contract between SolutionAgent and CostAg
 
 **inject_context:** No DB queries. Works entirely from other agents' outputs.
 
-**build_prompt:** System prompt: proposal QA reviewer. User prompt: all 4 prior outputs (`qualification`, `solution`, `compliance`, `cost`). Checks: staffing counts match between solution and cost, timeline consistency, no contradicting claims, all RFP requirements addressed, formatting issues.
+**build_prompt:** System prompt: proposal QA reviewer. User prompt: `rfp_brief` + all 4 prior outputs (`qualification`, `solution`, `compliance`, `cost`). Receives the original RFP brief so it can verify all RFP requirements are addressed. Checks: staffing counts match between solution and cost, timeline consistency, no contradicting claims, all RFP requirements addressed, formatting issues.
 
 **validate_output schema:**
 ```json
@@ -285,7 +302,10 @@ def generate_proposal_task(self, proposal_id: str):
         db.rollback()
         proposal = db.query(Proposal).filter(Proposal.id == proposal_id).first()
         if proposal:
-            proposal.status = "queued"
+            if self.request.retries >= self.max_retries:
+                proposal.status = "failed"
+            else:
+                proposal.status = "queued"
             db.commit()
         raise self.retry(exc=e, countdown=60)
     finally:
@@ -301,8 +321,9 @@ def generate_proposal_task(self, proposal_id: str):
 ## Dependencies & Schema Changes
 
 1. **Add `voyageai` to `backend/pyproject.toml`** — for SolutionAgent's embedding query.
-2. **Update `ProposalEmbedding.embedding`** — change `Vector(1536)` to `Vector(1024)` to match Voyage's `voyage-3-large` output dimensions. Table is empty and schema is managed via `Base.metadata.create_all()` on startup (no Alembic), so changing the column definition is sufficient.
+2. **Update `ProposalEmbedding.embedding`** — change `Vector(1536)` to `Vector(1024)` to match Voyage's `voyage-3-large` output dimensions (default). Table is empty and schema is managed via `Base.metadata.create_all()` on startup (no Alembic), so changing the column definition is sufficient.
 3. **Add `voyage_model` and `voyage_api_key` to `backend/app/config.py`** — `voyage_model` defaults to `"voyage-3-large"`, `voyage_api_key` reads from `VOYAGE_API_KEY` env var (required for the `voyageai` package).
+4. **Add `failed` to `ProposalStatus` enum** in `database.py` — used when Celery retries are exhausted. Without this, failed proposals remain stuck as `queued` with no way to distinguish them from legitimately queued proposals.
 
 ## ConsultAdd Context (for system prompts)
 
