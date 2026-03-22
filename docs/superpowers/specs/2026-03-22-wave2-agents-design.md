@@ -16,11 +16,13 @@ Implement the 5 specialist agents for the Blackbox RFP proposal system and wire 
 
 ## BaseAgent Changes
 
-Two changes to `backend/app/agents/base.py`:
+Three changes to `backend/app/agents/base.py`:
 
 1. **`AsyncAnthropic` client** — replace `Anthropic` with `AsyncAnthropic`. Change `self.client.messages.create(...)` to `await self.client.messages.create(...)`. No signature changes needed.
 
 2. **`max_tokens` class attribute** — extract the hardcoded `4096` to a class attribute so subclasses can override (SolutionAgent and ComplianceAgent need `8192`).
+
+3. **Sync DB I/O is acceptable for `inject_context()`** — the `SessionLocal()` calls in `inject_context()` are synchronous and will block the event loop briefly during `asyncio.gather` in the parallel fan-out. This is acceptable: the queries are simple key lookups on `CompanyKnowledge` (indexed by type), returning small result sets. Typical execution is <5ms. No need for async SQLAlchemy or `asyncio.to_thread()` at this stage.
 
 ## Orchestrator Changes
 
@@ -53,9 +55,52 @@ async def solution_comply_node(state: ProposalState) -> ProposalState:
 
 Graph becomes: `qualify → (conditional) → solution_comply → cost → review → END`
 
-3. **Add `proposal_id: str` to `ProposalState`** — passed through to agent runs for logging.
+3. **Add `proposal_id: str` to `ProposalState`** — explicit field in the TypedDict, passed through to agent runs for logging:
+
+```python
+class ProposalState(TypedDict, total=False):
+    rfp_id: str
+    rfp_brief: dict
+    proposal_id: str          # added
+    qualification: dict
+    solution: dict
+    compliance: dict
+    cost: dict
+    review: dict
+    status: str
+    errors: list
+```
+
+4. **All node functions** — cost and review nodes assemble context from state:
+
+```python
+async def cost_node(state: ProposalState) -> ProposalState:
+    agent = CostAgent()
+    result = await agent.run(
+        {"rfp_brief": state["rfp_brief"], "solution": state["solution"]},
+        proposal_id=state.get("proposal_id"),
+    )
+    return {"cost": result.output, "status": "costing"}
+
+async def review_node(state: ProposalState) -> ProposalState:
+    agent = ReviewAgent()
+    result = await agent.run(
+        {
+            "qualification": state["qualification"],
+            "solution": state["solution"],
+            "compliance": state["compliance"],
+            "cost": state["cost"],
+        },
+        proposal_id=state.get("proposal_id"),
+    )
+    return {"review": result.output, "status": "review"}
+```
+
+5. **Conditional qualification behavior** — `should_continue` checks `qualified` field only. When `qualified=True` and `recommendation="conditional"`, the pipeline continues — the conditional reasons are passed to Solution and Compliance agents via the `qualification` dict in state, so they can address the conditions in their outputs. When `qualified=False`, pipeline exits early regardless of recommendation. The `errors` field in `ProposalState` is populated with the qualification `missing` list on early exit.
 
 ## Agent Specifications
+
+**Naming convention:** `agent_type` values match the `AgentType` enum in `database.py` (e.g. `"comply"` not `"compliance"`). Class names use full English (e.g. `ComplianceAgent`). This is intentional — the short enum values are used in DB storage and orchestrator node names.
 
 ### QualificationAgent (`backend/app/agents/qualification.py`)
 
@@ -98,12 +143,17 @@ Graph becomes: `qualify → (conditional) → solution_comply → cost → revie
 ```json
 {
   "approach": str,            // markdown
-  "staffing_plan": str,
+  "staffing_plan": str,       // narrative description
+  "staffing": [               // structured — consumed by CostAgent
+    {"role": str, "hours": int, "headcount": int}
+  ],
   "timeline": str,
   "technology_stack": [str],
   "confidence": float         // 0.0-1.0
 }
 ```
+
+The `staffing` array is the structured contract between SolutionAgent and CostAgent. CostAgent's `calculate_costs()` consumes this directly — no LLM parsing needed. `staffing_plan` remains a narrative string for the human-readable proposal.
 
 ### ComplianceAgent (`backend/app/agents/compliance.py`)
 
@@ -142,7 +192,7 @@ Graph becomes: `qualify → (conditional) → solution_comply → cost → revie
 
 **inject_context:** Query `CompanyKnowledge` for types `ratecard`, `rate`. Load hourly/daily rates by role.
 
-**calculate_costs(context) -> dict:** Deterministic Python method called before `build_prompt()`. Parses staffing plan from `solution` output, looks up each role's rate from rate card, computes `rate * hours * headcount` per role, sums subtotals, adds margin. Flags any roles missing from rate card. Returns structured cost breakdown dict.
+**calculate_costs(context) -> dict:** Deterministic Python method called before `build_prompt()`. Reads the structured `staffing` array from SolutionAgent's output, looks up each role's rate from rate card, computes `rate * hours * headcount` per role, sums subtotals, adds margin. Flags any roles missing from rate card. Returns structured cost breakdown dict.
 
 **build_prompt:** System prompt: cost proposal assembler. User prompt: `rfp_brief` + `solution` output + pre-computed cost breakdown. LLM writes the narrative justification only — does not compute numbers.
 
@@ -197,34 +247,62 @@ Update `generate_proposal_task` in `backend/app/workers/tasks.py`:
 
 ```python
 import asyncio
+from sqlalchemy.orm import joinedload
 from app.agents.orchestrator import proposal_graph
 
-# Inside generate_proposal_task, after setting status to "generating":
-initial_state = {
-    "rfp_id": str(proposal.rfp_id),
-    "rfp_brief": proposal.rfp.extracted_brief,
-    "proposal_id": str(proposal.id),
-}
-result = asyncio.run(proposal_graph.ainvoke(initial_state))
+@celery_app.task(bind=True, max_retries=2)
+def generate_proposal_task(self, proposal_id: str):
+    db = SessionLocal()
+    try:
+        proposal = (
+            db.query(Proposal)
+            .options(joinedload(Proposal.rfp))  # eager load RFP
+            .filter(Proposal.id == proposal_id)
+            .first()
+        )
+        if not proposal:
+            return {"error": "Proposal not found"}
 
-proposal.qualification_result = result.get("qualification")
-proposal.solution_section = result.get("solution", {}).get("approach", "")
-proposal.compliance_section = result.get("compliance", {}).get("narrative", "")
-proposal.cost_section = result.get("cost")
-proposal.review_result = result.get("review")
-proposal.status = "draft"
-db.commit()
+        proposal.status = "generating"
+        db.commit()
+
+        initial_state = {
+            "rfp_id": str(proposal.rfp_id),
+            "rfp_brief": proposal.rfp.extracted_brief,
+            "proposal_id": str(proposal.id),
+        }
+        result = asyncio.run(proposal_graph.ainvoke(initial_state))
+
+        proposal.qualification_result = result.get("qualification")
+        proposal.solution_section = result.get("solution", {}).get("approach", "")
+        proposal.compliance_section = result.get("compliance", {}).get("narrative", "")
+        proposal.cost_section = result.get("cost")
+        proposal.review_result = result.get("review")
+        proposal.status = "draft"
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        proposal = db.query(Proposal).filter(Proposal.id == proposal_id).first()
+        if proposal:
+            proposal.status = "queued"
+            db.commit()
+        raise self.retry(exc=e, countdown=60)
+    finally:
+        db.close()
 ```
 
-On exception: set `proposal.status = "queued"`, let Celery retry (existing `max_retries=2`).
-
-`asyncio.run()` bridges the sync Celery worker to the async orchestrator — each task gets its own event loop.
+**Requirements:**
+- Uses `joinedload` to eager-load `proposal.rfp` before extracting `extracted_brief` into the state dict.
+- `self.retry(exc=e, countdown=60)` triggers Celery's retry mechanism (capped by `max_retries=2`).
+- Requires Celery **prefork pool** (the default). Gevent/eventlet pools are incompatible with `asyncio.run()`.
+- `asyncio.run()` creates a fresh event loop per task invocation — safe in prefork where each worker process is independent.
 
 ## Dependencies & Schema Changes
 
 1. **Add `voyageai` to `backend/pyproject.toml`** — for SolutionAgent's embedding query.
-2. **Update `ProposalEmbedding.embedding`** — change `Vector(1536)` to `Vector(1024)` to match Voyage's `voyage-3-large` output dimensions. Table is empty so this is a no-op migration.
-3. **Add `voyage_model` to `backend/app/config.py`** — default `"voyage-3-large"`.
+2. **Update `ProposalEmbedding.embedding`** — change `Vector(1536)` to `Vector(1024)` to match Voyage's `voyage-3-large` output dimensions. Table is empty and schema is managed via `Base.metadata.create_all()` on startup (no Alembic), so changing the column definition is sufficient.
+3. **Add `voyage_model` and `voyage_api_key` to `backend/app/config.py`** — `voyage_model` defaults to `"voyage-3-large"`, `voyage_api_key` reads from `VOYAGE_API_KEY` env var (required for the `voyageai` package).
 
 ## ConsultAdd Context (for system prompts)
 
