@@ -16,17 +16,27 @@ load_dotenv()
 HUBSPOT_BASE = "https://api.hubapi.com"
 API_KEY = os.getenv("HUBSPOT_API_KEY", "")
 PORTAL_ID = os.getenv("HUBSPOT_PORTAL_ID", "243046792")
-PIPELINE_NAME = "RFX"
+PIPELINE_NAME = os.getenv("HUBSPOT_PIPELINE_NAME", "Sales Pipeline")
 OUTPUT_DIR = Path(__file__).parent / "output"
 OUTPUT_FILE = OUTPUT_DIR / "hubspot_extract.json"
 MAX_RETRIES = 3
 
 STAGE_MAP = {
     "closedwon": "won",
+    "closed won": "won",
     "closedlost": "lost",
-    "qualifiedtobuy": "interview",
-    "presentationscheduled": "interview",
-    "decisionmakerboughtin": "interview",
+    "closed lost": "lost",
+    "interview": "interview",
+    "intent to award": "won",
+    "intenttoaward": "won",
+    "submitted": "pending",
+    "qualified": "pending",
+    "sourced": "pending",
+    "rfx cancelled": "lost",
+    "rfxcancelled": "lost",
+    "not qualified": "lost",
+    "notqualified": "lost",
+    "terminated": "lost",
 }
 
 
