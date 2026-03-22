@@ -1,0 +1,6 @@
+httpx
+click
+python-dotenv
+sqlalchemy
+psycopg2-binary
+slack_sdk

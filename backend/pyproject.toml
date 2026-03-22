@@ -1,0 +1,36 @@
+[project]
+name = "blackbox"
+version = "0.1.0"
+description = "AI-powered RFP proposal generation platform"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy>=2.0",
+    "alembic>=1.14",
+    "psycopg2-binary>=2.9",
+    "pgvector>=0.3",
+    "celery[redis]>=5.4",
+    "redis>=5.0",
+    "httpx>=0.28",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "python-dotenv>=1.0",
+    "python-multipart>=0.0.18",
+    "langchain>=0.3",
+    "langgraph>=0.2",
+    "langchain-anthropic>=0.3",
+    "anthropic>=0.42",
+    "sse-starlette>=2.0",
+    "pymupdf>=1.25",
+    "pytesseract>=0.3",
+    "python-docx>=1.1",
+    "openpyxl>=3.1",
+    "slack-bolt>=1.21",
+    "slack-sdk>=3.34",
+    "weasyprint>=63",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
