@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     s3_access_key: str = ""
     s3_secret_key: str = ""
     s3_endpoint: str = ""
+    voyage_api_key: str = ""
+    voyage_model: str = "voyage-3-large"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

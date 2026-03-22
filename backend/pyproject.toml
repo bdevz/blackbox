@@ -21,6 +21,7 @@ dependencies = [
     "langgraph>=0.2",
     "langchain-anthropic>=0.3",
     "anthropic>=0.42",
+    "voyageai>=0.3",
     "sse-starlette>=2.0",
     "pymupdf>=1.25",
     "pytesseract>=0.3",
@@ -29,6 +30,12 @@ dependencies = [
     "slack-bolt>=1.21",
     "slack-sdk>=3.34",
     "weasyprint>=63",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
 ]
 
 [build-system]

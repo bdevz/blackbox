@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic
 
 from app.config import settings
 from app.models.database import SessionLocal, AgentRun
@@ -26,11 +26,12 @@ class BaseAgent(ABC):
     model: str = "claude-sonnet-4-20250514"
     max_retries: int = 2
     temperature: float = 0.3
+    max_tokens: int = 4096
 
     def __init__(self, model: str = None):
         if model:
             self.model = model
-        self.client = Anthropic(api_key=settings.anthropic_api_key)
+        self.client = AsyncAnthropic(api_key=settings.anthropic_api_key)
 
     @abstractmethod
     def build_prompt(self, context: dict) -> tuple[str, str]:
@@ -54,9 +55,9 @@ class BaseAgent(ABC):
             prompt_hash = hashlib.sha256(system_prompt.encode()).hexdigest()[:16]
 
             start = time.monotonic()
-            response = self.client.messages.create(
+            response = await self.client.messages.create(
                 model=self.model,
-                max_tokens=4096,
+                max_tokens=self.max_tokens,
                 temperature=self.temperature,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}],
