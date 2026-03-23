@@ -15,6 +15,9 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
 )
 
+from app.workers.beat_schedule import CELERY_BEAT_SCHEDULE
+celery_app.conf.beat_schedule = CELERY_BEAT_SCHEDULE
+
 
 @celery_app.task(bind=True, max_retries=2)
 def generate_proposal_task(self, proposal_id: str):
@@ -147,3 +150,56 @@ def ingest_rfp_task(rfp_id: str, file_content_b64: str = None, filename: str = N
         return {"rfp_id": rfp_id, "status": "error", "error": str(e)}
     finally:
         db.close()
+
+
+@celery_app.task
+def sync_hubspot_outcomes_task():
+    """Periodic task: sync outcomes from HubSpot."""
+    from app.integrations.hubspot_sync import sync_outcomes
+    return sync_outcomes()
+
+
+@celery_app.task
+def embed_winning_proposals_task():
+    """Periodic task: embed winning proposals for similarity search."""
+    from app.integrations.embedding_pipeline import embed_winning_proposals
+    return embed_winning_proposals()
+
+
+@celery_app.task
+def run_coda_etl_task():
+    """Periodic task: extract data from Coda."""
+    import os
+    import subprocess
+    cwd = "/app" if os.path.exists("/app/etl") else "."
+    result = subprocess.run(
+        ["python", "etl/coda_extract.py", "extract", "--load-db"],
+        capture_output=True, text=True, timeout=300, cwd=cwd,
+    )
+    return {"stdout": result.stdout[-500:], "stderr": result.stderr[-500:], "returncode": result.returncode}
+
+
+@celery_app.task
+def run_hubspot_etl_task():
+    """Periodic task: extract data from HubSpot."""
+    import os
+    import subprocess
+    cwd = "/app" if os.path.exists("/app/etl") else "."
+    result = subprocess.run(
+        ["python", "etl/hubspot_extract.py", "extract", "--load-db"],
+        capture_output=True, text=True, timeout=300, cwd=cwd,
+    )
+    return {"stdout": result.stdout[-500:], "stderr": result.stderr[-500:], "returncode": result.returncode}
+
+
+@celery_app.task
+def run_slack_etl_task():
+    """Periodic task: extract data from Slack."""
+    import os
+    import subprocess
+    cwd = "/app" if os.path.exists("/app/etl") else "."
+    result = subprocess.run(
+        ["python", "etl/slack_extract.py", "extract", "--load-db"],
+        capture_output=True, text=True, timeout=300, cwd=cwd,
+    )
+    return {"stdout": result.stdout[-500:], "stderr": result.stderr[-500:], "returncode": result.returncode}
