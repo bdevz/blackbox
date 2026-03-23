@@ -1,10 +1,12 @@
+import io
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
-from app.models.database import Proposal, RFP, get_db
+from app.models.database import Proposal, RFP, CompanyKnowledge, get_db
 from app.workers.tasks import generate_proposal_task
 
 router = APIRouter()
@@ -79,3 +81,74 @@ def update_outcome(proposal_id: UUID, update: OutcomeUpdate, db: Session = Depen
     proposal.outcome = update.outcome
     db.commit()
     return {"status": "updated", "outcome": update.outcome}
+
+
+@router.get("/{proposal_id}/export/pdf")
+def export_pdf(proposal_id: UUID, db: Session = Depends(get_db)):
+    proposal = db.query(Proposal).options(joinedload(Proposal.rfp)).filter(Proposal.id == proposal_id).first()
+    if not proposal:
+        raise HTTPException(404, "Proposal not found")
+    if not proposal.assembled_document:
+        raise HTTPException(400, "Proposal has not been assembled yet")
+
+    from app.assembly.pdf_renderer import render_pdf
+    title = proposal.rfp.title if proposal.rfp else "Proposal"
+    pdf_bytes = render_pdf(proposal.assembled_document, title=title)
+    agency = (proposal.rfp.agency_name or "agency").replace(" ", "_") if proposal.rfp else "agency"
+    filename = f"{agency}_{proposal_id}_proposal.pdf"
+
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{proposal_id}/export/docx")
+def export_docx(proposal_id: UUID, db: Session = Depends(get_db)):
+    proposal = db.query(Proposal).options(joinedload(Proposal.rfp)).filter(Proposal.id == proposal_id).first()
+    if not proposal:
+        raise HTTPException(404, "Proposal not found")
+    if not proposal.assembled_document:
+        raise HTTPException(400, "Proposal has not been assembled yet")
+
+    from app.assembly.docx_renderer import render_docx
+    title = proposal.rfp.title if proposal.rfp else "Proposal"
+    docx_bytes = render_docx(proposal.assembled_document, title=title)
+    agency = (proposal.rfp.agency_name or "agency").replace(" ", "_") if proposal.rfp else "agency"
+    filename = f"{agency}_{proposal_id}_proposal.docx"
+
+    return StreamingResponse(
+        io.BytesIO(docx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/{proposal_id}/assemble")
+def reassemble_proposal(proposal_id: UUID, db: Session = Depends(get_db)):
+    proposal = db.query(Proposal).options(joinedload(Proposal.rfp)).filter(Proposal.id == proposal_id).first()
+    if not proposal:
+        raise HTTPException(404, "Proposal not found")
+
+    from app.assembly.assembler import assemble_proposal
+
+    boilerplate_rows = db.query(CompanyKnowledge).filter(CompanyKnowledge.type == "boilerplate").all()
+    boilerplate = {r.key: r.value for r in boilerplate_rows}
+
+    rfp = proposal.rfp
+    assembled = assemble_proposal(
+        rfp_title=rfp.title if rfp else "Untitled RFP",
+        agency_name=rfp.agency_name if rfp else "Unknown Agency",
+        deadline=str(rfp.deadline) if rfp and rfp.deadline else None,
+        qualification=proposal.qualification_result or {},
+        solution_section=proposal.solution_section or "",
+        compliance_section=proposal.compliance_section or "",
+        cost_section=proposal.cost_section or {},
+        review_result=proposal.review_result,
+        boilerplate=boilerplate,
+    )
+    proposal.assembled_document = assembled
+    db.commit()
+
+    return {"proposal_id": str(proposal_id), "status": "assembled", "length": len(assembled)}

@@ -49,6 +49,31 @@ def generate_proposal_task(self, proposal_id: str):
         proposal.cost_section = result.get("cost")
         proposal.review_result = result.get("review")
         proposal.status = "draft"
+
+        # Assemble document
+        try:
+            from app.assembly.assembler import assemble_proposal
+            from app.models.database import CompanyKnowledge
+
+            boilerplate_rows = db.query(CompanyKnowledge).filter(CompanyKnowledge.type == "boilerplate").all()
+            boilerplate = {r.key: r.value for r in boilerplate_rows}
+            rfp = proposal.rfp
+
+            proposal.assembled_document = assemble_proposal(
+                rfp_title=rfp.title if rfp else "Untitled RFP",
+                agency_name=rfp.agency_name if rfp else "Unknown Agency",
+                deadline=str(rfp.deadline) if rfp and rfp.deadline else None,
+                qualification=result.get("qualification", {}),
+                solution_section=result.get("solution", {}).get("approach", ""),
+                compliance_section=result.get("compliance", {}).get("narrative", ""),
+                cost_section=result.get("cost", {}),
+                review_result=result.get("review"),
+                boilerplate=boilerplate,
+            )
+        except Exception as assembly_err:
+            import logging
+            logging.getLogger(__name__).warning(f"Assembly failed: {assembly_err}")
+
         db.commit()
 
         return {"proposal_id": proposal_id, "status": "draft"}
