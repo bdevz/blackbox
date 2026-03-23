@@ -80,7 +80,7 @@ class RFP(Base):
     extracted_brief = Column(JSONB)
     qualification_score = Column(Float)
     ingested_at = Column(DateTime(timezone=True))
-    metadata = Column(JSONB, default=dict)
+    meta = Column(JSONB, default=dict)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     proposals = relationship("Proposal", back_populates="rfp")
