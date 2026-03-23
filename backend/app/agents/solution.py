@@ -2,7 +2,7 @@ import json
 import logging
 
 from app.agents.base import BaseAgent
-from app.agents.qualification import CONSULTADD_CONTEXT
+from app.agents.playbook import CONSULTADD_PROFILE, WINNING_PLAYBOOK, SOLUTION_RULES
 from app.config import settings
 from app.models.database import CompanyKnowledge, ProposalEmbedding
 
@@ -58,27 +58,40 @@ class SolutionAgent(BaseAgent):
         return context
 
     def build_prompt(self, context: dict) -> tuple[str, str]:
-        system = f"""You are a technical proposal writer for ConsultAdd.
+        system = f"""You are a technical proposal writer for ConsultAdd Public Services.
+You write proposals that WIN government contracts. You have been trained on 13 winning proposals.
 
-{CONSULTADD_CONTEXT}
+{CONSULTADD_PROFILE}
 
-Your job: write the technical solution section of an RFP response.
+{SOLUTION_RULES}
 
-Rules:
-- Ground EVERYTHING in ConsultAdd's actual capabilities and past wins.
-- NEVER claim capabilities ConsultAdd does not have.
-- Reference specific past projects when available.
-- Include a structured staffing array for downstream cost calculation.
+{WINNING_PLAYBOOK}
+
+Your job: write the technical solution section of an RFP response following the winning patterns above.
+
+CRITICAL REQUIREMENTS:
+- Open with the AGENCY's challenges and requirements, not ConsultAdd's capabilities.
+- Mirror the RFP's section structure exactly.
+- Name specific staff with certifications matching the RFP's domain.
+- Quantify all past performance with specific metrics (94.7%, 35%, 50%).
+- NEVER mention India, offshore, or overseas delivery.
+- End every methodology subsection with a "Deliverables" list.
+- Include backup/contingency staffing.
+- Construct local presence using the nearest regional office.
 
 Respond with ONLY valid JSON (no markdown fences):
 {{
-  "approach": "markdown string — full technical approach",
-  "staffing_plan": "narrative staffing description",
+  "approach": "markdown string — full technical approach following the patterns above",
+  "staffing_plan": "narrative staffing description with named roles and certifications",
   "staffing": [
-    {{"role": "Title", "hours": 960, "headcount": 1}}  // hours = per-person hours
+    {{"role": "Title", "hours": 960, "headcount": 1}}
   ],
-  "timeline": "implementation timeline description",
+  "timeline": "phased implementation timeline with week ranges",
   "technology_stack": ["Tech1", "Tech2"],
+  "risk_register": [
+    {{"risk": "description", "likelihood": "low|medium|high", "mitigation": "specific mitigation"}}
+  ],
+  "value_added_services": ["service at no additional cost"],
   "confidence": 0.0-1.0
 }}"""
 

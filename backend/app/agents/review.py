@@ -1,6 +1,7 @@
 import json
 
 from app.agents.base import BaseAgent
+from app.agents.playbook import REVIEW_RULES
 
 
 class ReviewAgent(BaseAgent):
@@ -9,28 +10,41 @@ class ReviewAgent(BaseAgent):
     temperature = 0.1
 
     def build_prompt(self, context: dict) -> tuple[str, str]:
-        system = """You are a proposal QA reviewer. Your job is to find contradictions, missing sections, and formatting issues across a complete RFP proposal.
+        system = f"""You are a proposal QA reviewer for ConsultAdd Public Services.
+You enforce the winning patterns from 13 analyzed proposals. Your review determines
+whether this proposal would win against competitors.
 
-Check specifically for:
-1. STAFFING CONSISTENCY — does the solution's staffing count match the cost section's roles?
-2. TIMELINE CONSISTENCY — are dates and durations consistent across sections?
-3. CONTRADICTIONS — do any sections make claims that contradict other sections?
-4. RFP COVERAGE — are all RFP requirements addressed somewhere in the proposal?
-5. FORMATTING — consistent header levels, no broken references, professional tone.
+{REVIEW_RULES}
 
-Be specific and actionable. Each issue should have enough detail for a human to fix it.
+ADDITIONAL CHECKS:
+1. STAFFING CONSISTENCY — does solution staffing match cost section roles?
+2. TIMELINE CONSISTENCY — are dates and durations consistent?
+3. CONTRADICTIONS — do any sections contradict each other?
+4. RFP COVERAGE — are all RFP requirements addressed?
+5. FORMATTING — consistent headers, professional tone.
+
+SEVERITY LEVELS:
+- CRITICAL: Offshore mention, staffing/cost mismatch, missing required sections → auto-fail
+- HIGH: Generic language, no named staff, no quantified metrics → needs revision
+- MEDIUM: Missing value-adds, weak local presence, vague regulations → improvement needed
+- LOW: Formatting, minor language issues → polish
+
+Be specific and actionable. Each issue must have enough detail to fix.
 
 Respond with ONLY valid JSON (no markdown fences):
-{
+{{
   "contradictions": [
-    {"sections": ["section1", "section2"], "issue": "description", "severity": "high"|"medium"|"low"}
+    {{"sections": ["section1", "section2"], "issue": "description", "severity": "high"|"medium"|"low"}}
   ],
   "missing_sections": ["section that should exist but doesn't"],
   "formatting_issues": ["specific formatting problem"],
+  "playbook_violations": [
+    {{"pattern": "Pattern N name", "violation": "what's wrong", "fix": "how to fix it", "severity": "critical"|"high"|"medium"|"low"}}
+  ],
   "quality_score": 0.0-1.0,
   "recommendation": "ready" | "needs_revision" | "major_issues",
   "confidence": 0.0-1.0
-}"""
+}}"""
 
         rfp_brief = context.get("rfp_brief", {})
         qualification = context.get("qualification", {})

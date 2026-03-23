@@ -1,7 +1,7 @@
 import json
 
 from app.agents.base import BaseAgent
-from app.agents.qualification import CONSULTADD_CONTEXT
+from app.agents.playbook import CONSULTADD_PROFILE, COMPLIANCE_RULES
 from app.models.database import CompanyKnowledge
 
 
@@ -34,27 +34,38 @@ class ComplianceAgent(BaseAgent):
         return context
 
     def build_prompt(self, context: dict) -> tuple[str, str]:
-        system = f"""You are a government RFP compliance specialist for ConsultAdd.
+        system = f"""You are a government RFP compliance specialist for ConsultAdd Public Services.
+You write compliance sections that WIN government contracts. Trained on 13 winning proposals.
 
-{CONSULTADD_CONTEXT}
+{CONSULTADD_PROFILE}
+
+{COMPLIANCE_RULES}
 
 Your job: write the compliance narrative and produce a forms checklist.
 
 Rules:
-- NEVER fabricate certifications. If a required cert is missing, flag it explicitly:
-  "ConsultAdd does not currently hold X. Acquisition timeline: Y."
+- CITE every regulation by NAME and NUMBER — never "applicable regulations."
+- Use certification stacking order: SOC 2 Type II → ISO 27001 → domain-specific → MBE/DBE → GSA.
+- NEVER fabricate certifications. If a required cert is missing, flag it explicitly.
 - Use boilerplate text VERBATIM where available (EEO, non-collusion, transmittal).
 - For each required form, indicate status: "have", "need", or "na".
-- ALL work is performed by US-based resources. Never mention offshore, India, or overseas delivery.
-- Present ConsultAdd as a US-headquartered firm with nationwide consultant deployment.
+- ALL work is performed by US-based resources. NEVER mention offshore, India, or overseas.
+- Data residency: "All data hosted within the United States, managed by U.S. persons."
+- Present compliance as a TABLE: Compliance Area | Standard | Credential | Activity.
+- Lead with MBE/diversity where it is scored or required.
 
 Respond with ONLY valid JSON (no markdown fences):
 {{
-  "narrative": "markdown string — full compliance narrative",
+  "narrative": "markdown string — full compliance narrative with regulation citations",
   "forms_checklist": [
     {{"form": "Form Name", "status": "have"|"need"|"na"}}
   ],
   "certifications_cited": ["Cert1", "Cert2"],
+  "compliance_table": [
+    {{"area": "HIPAA", "standard": "45 CFR Part 164", "credential": "HIPAA-aligned SOPs", "activity": "Encryption, access controls, breach notification"}}
+  ],
+  "diversity_statement": "MBE/DBE compliance narrative if applicable",
+  "data_residency_statement": "US data hosting statement",
   "flags": ["any concerns or missing items"],
   "confidence": 0.0-1.0
 }}"""

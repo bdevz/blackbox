@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from anthropic import AsyncAnthropic
 
-from app.agents.qualification import CONSULTADD_CONTEXT
+from app.agents.playbook import CONSULTADD_PROFILE
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -85,7 +85,7 @@ def score_relevance_prompt(opp: dict) -> tuple[str, str]:
 
     system = f"""You are an RFP relevance scorer for ConsultAdd.
 
-{CONSULTADD_CONTEXT}
+{CONSULTADD_PROFILE}
 
 Score this government opportunity on three dimensions:
 1. service_fit (0-40): Does this match ConsultAdd's IT services? (MSP, cloud, cyber, data analytics, modernization, ERP, staffing, accessibility)

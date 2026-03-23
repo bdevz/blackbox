@@ -36,7 +36,14 @@ def _build_cover_letter(rfp_title, agency_name, deadline, boilerplate=None):
     date_str = datetime.now().strftime("%B %d, %Y")
     deadline_str = deadline or "as specified"
 
-    return f"""# Cover Letter
+    # Pattern 1: Open with the agency, not ConsultAdd
+    # Pattern 2: Mirror RFP scope in the letter
+    # Pattern 10: Include MBE status
+    return f"""# Letter of Transmittal
+
+**Consultadd Public Services**
+175 Greenwich St, 38th Floor
+New York, NY 10007
 
 **Date:** {date_str}
 
@@ -46,17 +53,22 @@ def _build_cover_letter(rfp_title, agency_name, deadline, boilerplate=None):
 
 Dear Procurement Officer,
 
-ConsultAdd, Inc. is pleased to submit this proposal in response to the above-referenced Request for Proposal. We have carefully reviewed the requirements and are confident in our ability to deliver exceptional results.
+On behalf of Consultadd Public Services, a division of Consultadd Inc., we are pleased to submit our proposal in response to the above-referenced solicitation. We recognize the importance of this initiative to {agency_name} and are fully committed to delivering results that strengthen your organization's operational capabilities.
 
 {transmittal}
 
-ConsultAdd is a 600-person enterprise technology firm with 350+ specialized field consultants deployed nationwide. With 15+ years of experience and 200+ successful government projects, we bring deep SLED expertise backed by ISO 27001, SOC 2 Type II, and CMMC Level I certifications.
+We have carefully reviewed the entire solicitation package, including all instructions, scope requirements, deliverables, conditions, insurance requirements, and compliance provisions. Consultadd Public Services confirms full compliance with all terms and conditions as stated.
 
-We confirm our proposal remains valid through the deadline of {deadline_str} and look forward to the opportunity to serve {agency_name}.
+Consultadd is a certified Minority Business Enterprise (MBE) with over 15 years of experience and 250+ government contracts awarded. With 600+ IT professionals and 350+ specialized field consultants deployed nationwide, we bring deep state and local government expertise backed by SOC 2 Type II, ISO 27001, and CMMC Level I certifications. We are an AWS Advanced Partner, Microsoft Solutions Partner, and GSA MAS Schedule holder.
+
+We confirm our proposal remains valid for a minimum period of 180 days and look forward to the opportunity to serve {agency_name}.
 
 Respectfully submitted,
 
-**ConsultAdd, Inc.**"""
+**Bharat Bhate**
+Founder & President
+Consultadd Inc.
+bharat.b@consultadd.com"""
 
 
 def _build_toc():
@@ -76,16 +88,29 @@ def _build_executive_summary(qualification, rfp_title, agency_name):
     confidence = qualification.get("confidence", 0)
     reasons = qualification.get("reasons", [])
     recommendation = qualification.get("recommendation", "go")
-    reasons_md = "\n".join(f"- {r}" for r in reasons) if reasons else "- Meets all requirements"
+    strengths = [r for r in reasons if not r.lower().startswith("no ") and "missing" not in r.lower() and "lack" not in r.lower()]
+    strengths_md = "\n".join(f"- {r}" for r in strengths) if strengths else "- Deep expertise in government IT services"
 
+    # Pattern 1: Open with agency framing, not vendor positioning
+    # Pattern 8: Reference the agency by name and context
     return f"""# 1. Executive Summary
 
-ConsultAdd is pleased to present our proposal for **{rfp_title}** for **{agency_name}**.
+## Understanding of {agency_name}'s Requirements
 
-**Qualification Assessment:** {recommendation.upper()} (Confidence: {confidence:.0%})
+{agency_name} is undertaking an important initiative with **{rfp_title}**. Consultadd Public Services understands that {agency_name} seeks more than a traditional contractor — it is looking for a strategic partner that can provide expert leadership, proven methodology, and measurable outcomes.
 
-**Key Strengths:**
-{reasons_md}"""
+## Why Consultadd Public Services
+
+Consultadd Public Services is a certified Minority Business Enterprise (MBE) with over 15 years of experience and 250+ government contracts awarded across state, local, and federal agencies. Our team of 600+ IT professionals includes 350+ specialized field consultants deployed nationwide.
+
+**Key Strengths for This Engagement:**
+{strengths_md}
+
+## Our Commitment
+
+We do not view this as a transactional engagement. Our approach is grounded in partnership, transparency, and a commitment to exceeding expectations. {agency_name} will always have full visibility into our work through regular reporting, milestone reviews, and direct access to our leadership team.
+
+All work will be performed by U.S.-based staff from our nationwide team. Executive oversight by Bharat Bhate (Founder & President) and our PMO Director is included at no additional cost."""
 
 
 def _build_cost_section(cost_section):

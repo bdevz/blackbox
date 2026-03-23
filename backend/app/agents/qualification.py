@@ -1,44 +1,12 @@
 import json
 
 from app.agents.base import BaseAgent
+from app.agents.playbook import CONSULTADD_PROFILE, QUALIFICATION_RULES
 from app.models.database import CompanyKnowledge
 
 
-CONSULTADD_CONTEXT = """ConsultAdd is a 600-person US-based enterprise technology firm.
-Headquarters: 175 Greenwich St, 38th Floor, New York, NY.
-15+ years in business. 200+ successful government projects delivered. 98% on-time/on-budget.
-350+ specialized field consultants deployed nationwide across all 50 states.
-
-Services:
-- IT Managed Services (MSP), IT Consulting, IT Staffing
-- Cloud Migration & Services (AWS, Azure) with FedRAMP compliance
-- Cybersecurity & Managed Security Services (FISMA, NIST)
-- Data Analytics & Data Migration
-- Legacy Modernization & Application Development
-- Enterprise System Implementation (Oracle, SAP, Microsoft ERP, Salesforce)
-- Digital Accessibility Services
-
-Certifications & Compliance:
-- ISO 27001, SOC 2 Type II, CMMC Level I
-- GSA Schedule holder
-- CMAS (California cooperative purchasing)
-- USPAACC certified
-
-Technology Partnerships:
-- AWS Advanced Partner, Microsoft Partner, Oracle Partner
-- Salesforce Partner, IBM Silver Partner
-
-Past Performance (state & local):
-- Ohio Department of Natural Resources, New Jersey state agencies
-- Orange County, Macomb County, Social Security Administration
-- Multiple state DOT, DAS, and university systems
-
-Sweet spot: $100K–$500K SLED contracts in IT professional services.
-Competitive advantage: 350+ US-based consultants, deep SLED experience, competitive rates.
-
-IMPORTANT: All staffing, delivery, and pricing must be based on US resources only.
-Do NOT mention offshore, India, or overseas delivery unless the RFP specifically
-requests or prefers offshore/global delivery capabilities."""
+# Re-export for backward compatibility (other agents import from here)
+CONSULTADD_CONTEXT = CONSULTADD_PROFILE
 
 
 class QualificationAgent(BaseAgent):
@@ -62,14 +30,17 @@ class QualificationAgent(BaseAgent):
     def build_prompt(self, context: dict) -> tuple[str, str]:
         system = f"""You are a government RFP qualification classifier for ConsultAdd.
 
-{CONSULTADD_CONTEXT}
+{CONSULTADD_PROFILE}
+
+{QUALIFICATION_RULES}
 
 Your job: determine whether ConsultAdd should bid on this RFP.
 
 Process:
-1. DETERMINISTIC CHECKS FIRST — match required certifications, state registrations, revenue thresholds, years in business, and category against ConsultAdd's actual qualifications.
-2. LLM JUDGMENT SECOND — assess soft factors like scope fit, team capacity, and competitive positioning.
-3. Flag anything missing but potentially acquirable before the deadline.
+1. DETERMINISTIC CHECKS FIRST — match required certifications, state registrations, revenue thresholds, years in business, and category against ConsultAdd's actual qualifications above.
+2. WIN HISTORY CHECK — ConsultAdd has won 50+ awards across MSP, cybersecurity, SharePoint, cloud, data, ERP, and IT consulting for cities, counties, schools, universities, transit, housing, airports, and state agencies in 15+ states. Check if this RFP matches any winning category.
+3. LLM JUDGMENT — assess scope fit, team capacity, competitive positioning, and pricing viability.
+4. Flag anything missing but potentially acquirable before the deadline.
 
 Respond with ONLY valid JSON (no markdown fences):
 {{

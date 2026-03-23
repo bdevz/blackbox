@@ -1,7 +1,7 @@
 import json
 
 from app.agents.base import BaseAgent
-from app.agents.qualification import CONSULTADD_CONTEXT
+from app.agents.playbook import CONSULTADD_PROFILE, COST_RULES
 from app.models.database import CompanyKnowledge
 
 DEFAULT_MARGIN = 0.15
@@ -134,24 +134,30 @@ class CostAgent(BaseAgent):
         return context
 
     def build_prompt(self, context: dict) -> tuple[str, str]:
-        system = f"""You are a cost proposal assembler for ConsultAdd.
+        system = f"""You are a cost proposal assembler for ConsultAdd Public Services.
+You write cost proposals that WIN government contracts. Trained on 13 winning proposals.
 
-{CONSULTADD_CONTEXT}
+{CONSULTADD_PROFILE}
 
-Your job: write ONLY the cost justification narrative. The numbers have already been calculated deterministically — do NOT change them.
+{COST_RULES}
 
-You will receive:
-1. The RFP brief
-2. The solution's staffing plan
-3. Pre-computed cost breakdown (use these exact numbers)
+Your job: write ONLY the cost justification narrative. The numbers have been calculated deterministically — do NOT change them.
 
-Write a compelling narrative that justifies the pricing.
+WINNING COST PATTERNS (from analyzed proposals):
+- Kenai: $16,800 fixed fee vs $25K cap — milestone-based, all-inclusive
+- MHA: $243K/yr MSP — fixed monthly retainer with clear SLAs
+- Olmos Park: $4,950/mo — 3 discount tiers (prompt pay, quarterly, multi-year)
+- Data Governance: $5,800 vs $49,999 cap — per-training-module pricing
+- NACCHO: $9,345 with 0% indirect costs — transparent line-item budget
 
 CRITICAL RULES:
-- ALL pricing is based on US-based resources ONLY. Never mention offshore, India, or overseas delivery.
-- Emphasize ConsultAdd's 350+ US-based field consultants deployed nationwide.
-- Justify rates based on deep SLED experience, competitive US market rates, and proven delivery track record.
-- If rates seem competitive, cite efficiency from 200+ past government engagements — NOT labor arbitrage.
+- ALL pricing based on US-based resources ONLY. NEVER mention India, offshore, or overseas.
+- NEVER say "India-based delivery" or "offshore cost advantage."
+- Justify competitive rates: "efficiency from 250+ government engagements and proven delivery model."
+- Include "Executive Oversight (Bharat Bhate + PMO Director): Included at no additional cost."
+- List explicit exclusions (what's NOT in scope) to prevent scope creep.
+- Tie payment to deliverable milestones, not calendar time.
+- Include discount offers where appropriate (prompt pay, multi-year, nonprofit).
 
 Respond with ONLY valid JSON (no markdown fences):
 {{
@@ -165,7 +171,10 @@ Respond with ONLY valid JSON (no markdown fences):
     {{"item": "Description", "amount": 5000.0}}
   ],
   "total": 446600.0,
-  "narrative": "markdown string — cost justification",
+  "narrative": "markdown string — cost justification following the patterns above",
+  "exclusions": ["what is NOT included in this price"],
+  "discounts_offered": ["2% prompt payment within 10 days"],
+  "executive_oversight": "Included at no additional cost — Bharat Bhate (CEO) and PMO Director provide executive QA and compliance oversight",
   "confidence": 0.0-1.0
 }}
 

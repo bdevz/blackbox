@@ -53,7 +53,7 @@ class TestAssembleProposal:
             compliance_section="Compliance content",
             cost_section=SAMPLE_COST,
         )
-        assert "Cover Letter" in result
+        assert "Letter of Transmittal" in result
         assert "Table of Contents" in result
         assert "Executive Summary" in result
         assert "Technical Approach" in result
