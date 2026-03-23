@@ -59,8 +59,9 @@ def generate_proposal_task(self, proposal_id: str):
         if proposal:
             if self.request.retries >= self.max_retries:
                 proposal.status = "failed"
-            else:
-                proposal.status = "queued"
+                db.commit()
+                raise
+            proposal.status = "queued"
             db.commit()
         raise self.retry(exc=e, countdown=60)
     finally:

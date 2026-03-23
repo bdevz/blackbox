@@ -3,7 +3,7 @@ import logging
 
 from app.agents.base import BaseAgent
 from app.config import settings
-from app.models.database import SessionLocal, CompanyKnowledge, ProposalEmbedding
+from app.models.database import CompanyKnowledge, ProposalEmbedding
 
 logger = logging.getLogger(__name__)
 
