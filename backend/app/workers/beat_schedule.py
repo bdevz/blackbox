@@ -3,6 +3,10 @@
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
+    "fetch-highergov-rfps": {
+        "task": "app.workers.tasks.fetch_highergov_rfps_task",
+        "schedule": crontab(hour="6", minute="0"),  # 6 AM UTC daily
+    },
     "sync-hubspot-outcomes": {
         "task": "app.workers.tasks.sync_hubspot_outcomes_task",
         "schedule": crontab(hour="*/6"),

@@ -59,3 +59,38 @@ def ingest_url(url: str, db: Session = Depends(get_db)):
     ingest_rfp_task.delay(str(rfp.id), file_url=url)
 
     return {"id": str(rfp.id), "status": "queued", "url": url}
+
+
+@router.post("/fetch-highergov")
+def fetch_highergov(captured_date: str = None, db: Session = Depends(get_db)):
+    """Trigger HigherGov RFP fetch. Defaults to yesterday if no date given."""
+    from app.workers.tasks import fetch_highergov_rfps_task
+    task = fetch_highergov_rfps_task.delay(captured_date=captured_date)
+    return {"task_id": task.id, "status": "queued", "captured_date": captured_date or "yesterday"}
+
+
+@router.get("/highergov/stats")
+def highergov_stats(db: Session = Depends(get_db)):
+    """Show HigherGov ingestion stats."""
+    from sqlalchemy import func
+    total = db.query(func.count(RFP.id)).filter(RFP.source == "highergov").scalar()
+    by_state = (
+        db.query(RFP.agency_state, func.count(RFP.id))
+        .filter(RFP.source == "highergov")
+        .group_by(RFP.agency_state)
+        .order_by(func.count(RFP.id).desc())
+        .limit(10)
+        .all()
+    )
+    by_category = (
+        db.query(RFP.category, func.count(RFP.id))
+        .filter(RFP.source == "highergov")
+        .group_by(RFP.category)
+        .order_by(func.count(RFP.id).desc())
+        .all()
+    )
+    return {
+        "total_ingested": total,
+        "by_state": [{"state": s, "count": c} for s, c in by_state],
+        "by_naics": [{"naics": n, "count": c} for n, c in by_category],
+    }

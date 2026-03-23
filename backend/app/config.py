@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     slack_interview_channel: str = "C088YP1M732"
     slack_general_channel: str = "C07AYH29X4L"
     highergov_api_key: str = ""
+    highergov_relevance_threshold: int = 60
+    highergov_auto_qualify_threshold: int = 80
     s3_bucket: str = ""
     s3_access_key: str = ""
     s3_secret_key: str = ""
