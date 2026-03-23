@@ -49,10 +49,17 @@ class TestTier2Filter:
         opp = self._make_opp(due_date="2020-01-01")
         assert passes_tier2_filter(opp, set()) is False
 
-    def test_due_date_too_soon_rejected(self):
-        tomorrow = (datetime.now(timezone.utc) + timedelta(days=2)).strftime("%Y-%m-%d")
-        opp = self._make_opp(due_date=tomorrow)
+    def test_due_in_12_hours_rejected(self):
+        """Less than 24h — can't start at 3 PM IST and hit a US ET deadline."""
+        soon = (datetime.now(timezone.utc) + timedelta(hours=12)).strftime("%Y-%m-%d")
+        opp = self._make_opp(due_date=soon)
         assert passes_tier2_filter(opp, set()) is False
+
+    def test_due_in_2_days_passes(self):
+        """2 days out is tight but workable."""
+        two_days = (datetime.now(timezone.utc) + timedelta(days=2)).strftime("%Y-%m-%d")
+        opp = self._make_opp(due_date=two_days)
+        assert passes_tier2_filter(opp, set()) is True
 
     def test_due_date_too_far_out_rejected(self):
         """RFPs due more than 15 days out are not urgent enough."""

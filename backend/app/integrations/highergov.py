@@ -26,7 +26,7 @@ NAICS_CODES = [
 ]
 
 # Tier 2 thresholds
-MIN_DAYS_UNTIL_DUE = 7
+MIN_HOURS_UNTIL_DUE = 24  # At least 24h — 3 PM IST start means US ET deadlines same-day are too tight
 MAX_DAYS_UNTIL_DUE = 15  # Only RFPs due within the next 2 weeks
 MAX_ESTIMATED_VALUE = 2_000_000  # $2M ceiling — anything above is likely too big
 
@@ -50,18 +50,20 @@ def passes_tier2_filter(opp: dict, existing_keys: set[str]) -> bool:
     if opp.get("product_service") == "P":
         return False
 
-    # Due date checks — only want RFPs due within the next 7-15 days
+    # Due date checks — only want RFPs due within 24h to 15 days
+    # Team starts at 3 PM IST (9:30 AM UTC), most US deadlines are ET (UTC-4/5)
+    # So a same-day 5 PM ET deadline = only ~3.5h of work time — too tight
     due = opp.get("due_date")
     if due:
         try:
             due_dt = datetime.strptime(due, "%Y-%m-%d").replace(tzinfo=timezone.utc)
             now = datetime.now(timezone.utc)
-            days_until = (due_dt - now).days
-            if days_until < 0:
+            hours_until = (due_dt - now).total_seconds() / 3600
+            if hours_until < 0:
                 return False  # Already expired
-            if days_until < MIN_DAYS_UNTIL_DUE:
-                return False  # Too soon to prepare a quality proposal
-            if days_until > MAX_DAYS_UNTIL_DUE:
+            if hours_until < MIN_HOURS_UNTIL_DUE:
+                return False  # Less than 24h — can't prepare a quality proposal
+            if (due_dt - now).days > MAX_DAYS_UNTIL_DUE:
                 return False  # Too far out — focus on what's urgent
         except ValueError:
             pass  # Unparseable date — don't reject
