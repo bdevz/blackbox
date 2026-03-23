@@ -117,7 +117,7 @@ def sample_cost_output():
             {"item": "Licenses and tools", "amount": 12000.0},
         ],
         "total": 489600.0,
-        "narrative": "## Cost Justification\n\nOur pricing reflects competitive India-based rates...",
+        "narrative": "## Cost Justification\n\nOur pricing reflects competitive rates backed by 350+ US-based consultants...",
         "confidence": 0.90,
     }
 

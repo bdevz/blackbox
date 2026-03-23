@@ -1,14 +1,8 @@
 import json
 
 from app.agents.base import BaseAgent
+from app.agents.qualification import CONSULTADD_CONTEXT
 from app.models.database import CompanyKnowledge
-
-
-CONSULTADD_CONTEXT = """ConsultAdd is a 30-person IT consulting company based in India.
-- Targets state and local government RFPs only (no federal)
-- Wins on competitive cost, not boutique quality
-- Current win rate: 3-4% (volume strategy — more at-bats = more wins)
-- Goal: 10x proposal volume (100 → 1,000 RFPs/month) with same headcount"""
 
 
 class ComplianceAgent(BaseAgent):

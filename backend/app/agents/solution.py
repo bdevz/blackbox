@@ -2,16 +2,11 @@ import json
 import logging
 
 from app.agents.base import BaseAgent
+from app.agents.qualification import CONSULTADD_CONTEXT
 from app.config import settings
 from app.models.database import CompanyKnowledge, ProposalEmbedding
 
 logger = logging.getLogger(__name__)
-
-CONSULTADD_CONTEXT = """ConsultAdd is a 30-person IT consulting company based in India.
-- Targets state and local government RFPs only (no federal)
-- Wins on competitive cost, not boutique quality
-- Current win rate: 3-4% (volume strategy — more at-bats = more wins)
-- Goal: 10x proposal volume (100 → 1,000 RFPs/month) with same headcount"""
 
 
 class SolutionAgent(BaseAgent):

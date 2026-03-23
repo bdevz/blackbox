@@ -19,7 +19,7 @@ SAMPLE_COST = {
     },
     "other_costs": [{"item": "Cloud infra", "amount": 12000.0}],
     "total": 208800.0,
-    "narrative": "Competitive India-based pricing.",
+    "narrative": "Competitive pricing with US-based delivery.",
 }
 
 SAMPLE_BOILERPLATE = {

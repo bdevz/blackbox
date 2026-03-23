@@ -50,7 +50,7 @@ ConsultAdd, Inc. is pleased to submit this proposal in response to the above-ref
 
 {transmittal}
 
-ConsultAdd is a specialized IT consulting firm with extensive experience serving state and local government agencies. Our India-based delivery model provides significant cost advantages while maintaining the highest quality standards.
+ConsultAdd is a 600-person enterprise technology firm with 350+ specialized field consultants deployed nationwide. With 15+ years of experience and 200+ successful government projects, we bring deep SLED expertise backed by ISO 27001, SOC 2 Type II, and CMMC Level I certifications.
 
 We confirm our proposal remains valid through the deadline of {deadline_str} and look forward to the opportunity to serve {agency_name}.
 
