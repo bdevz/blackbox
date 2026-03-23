@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     s3_endpoint: str = ""
     voyage_api_key: str = ""
     voyage_model: str = "voyage-3-large"
+    max_concurrent_api_calls: int = 4
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

@@ -76,6 +76,32 @@ class TestBuildPrompt:
         assert sample_rfp_brief["title"] in user
 
 
+class TestReviewFeedbackInPrompt:
+    def setup_method(self):
+        self.agent = ComplianceAgent.__new__(ComplianceAgent)
+
+    def test_review_feedback_included_in_user_prompt(self, sample_rfp_brief, sample_qualification_output):
+        context = {
+            "rfp_brief": sample_rfp_brief,
+            "qualification": sample_qualification_output,
+            "certifications": [],
+            "boilerplate": [],
+            "review_feedback": "[MEDIUM] Claims CMMI Level 5, only have Level 3",
+        }
+        _, user = self.agent.build_prompt(context)
+        assert "CMMI Level 5" in user
+
+    def test_no_review_feedback_no_section(self, sample_rfp_brief, sample_qualification_output):
+        context = {
+            "rfp_brief": sample_rfp_brief,
+            "qualification": sample_qualification_output,
+            "certifications": [],
+            "boilerplate": [],
+        }
+        _, user = self.agent.build_prompt(context)
+        assert "QA reviewer found" not in user
+
+
 class TestAgentAttributes:
     def test_agent_type(self):
         assert ComplianceAgent.agent_type == "comply"
