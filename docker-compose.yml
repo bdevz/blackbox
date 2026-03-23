@@ -57,5 +57,20 @@ services:
       - ./backend:/app
     command: celery -A app.workers.tasks worker --loglevel=info --concurrency=6
 
+  beat:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://blackbox:blackbox@postgres:5432/blackbox
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: celery -A app.workers.tasks beat --loglevel=info --schedule=/tmp/celerybeat-schedule
+
 volumes:
   pgdata:

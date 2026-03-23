@@ -53,3 +53,27 @@ def outcome_tracker(db: Session = Depends(get_db)):
 def deadline_radar(db: Session = Depends(get_db)):
     rfps = db.query(RFP).filter(RFP.deadline.isnot(None)).order_by(RFP.deadline).limit(50).all()
     return [{"id": str(r.id), "title": r.title, "agency": r.agency_name, "deadline": r.deadline, "state": r.agency_state} for r in rfps]
+
+
+@router.get("/agents/detailed")
+def agent_detailed_stats(db: Session = Depends(get_db)):
+    from app.analytics.agent_analytics import get_agent_detailed_stats
+    return get_agent_detailed_stats(db)
+
+
+@router.get("/proposals/{proposal_id}/cost-breakdown")
+def proposal_cost_breakdown(proposal_id: str, db: Session = Depends(get_db)):
+    from app.analytics.agent_analytics import get_proposal_cost_breakdown
+    return get_proposal_cost_breakdown(db, proposal_id)
+
+
+@router.get("/optimization-recommendations")
+def optimization_recommendations(db: Session = Depends(get_db)):
+    from app.analytics.agent_analytics import get_optimization_recommendations
+    return get_optimization_recommendations(db)
+
+
+@router.get("/win-analysis")
+def win_analysis(db: Session = Depends(get_db)):
+    from app.analytics.outcome_analysis import get_win_analysis
+    return get_win_analysis(db)
