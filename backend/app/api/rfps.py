@@ -12,7 +12,7 @@ router = APIRouter()
 def list_rfps(skip: int = 0, limit: int = 50, status: str = None, db: Session = Depends(get_db)):
     query = db.query(RFP).order_by(RFP.created_at.desc())
     if status:
-        query = query.filter(RFP.metadata["status"].astext == status)
+        query = query.filter(RFP.meta["status"].astext == status)
     return query.offset(skip).limit(limit).all()
 
 
