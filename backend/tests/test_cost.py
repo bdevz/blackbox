@@ -167,6 +167,105 @@ class TestReviewFeedbackInPrompt:
         assert "QA reviewer found" not in user
 
 
+class TestPriceToWin:
+    def setup_method(self):
+        self.agent = CostAgent.__new__(CostAgent)
+
+    def test_flags_over_budget(self, sample_solution_output):
+        rate_card = {
+            "Project Manager": {"hourly": 95},
+            "Cloud Architect": {"hourly": 110},
+            "Senior Developer": {"hourly": 75},
+            "Developer": {"hourly": 55},
+            "QA Engineer": {"hourly": 50},
+        }
+        result = self.agent.calculate_costs(
+            staffing=sample_solution_output["staffing"],
+            rate_card=rate_card,
+            estimated_value=200000.0,
+        )
+        assert result["over_budget"] is True
+        assert "value_engineered" in result
+
+    def test_not_over_budget_when_within_threshold(self, sample_solution_output):
+        rate_card = {
+            "Project Manager": {"hourly": 95},
+            "Cloud Architect": {"hourly": 110},
+            "Senior Developer": {"hourly": 75},
+            "Developer": {"hourly": 55},
+            "QA Engineer": {"hourly": 50},
+        }
+        result = self.agent.calculate_costs(
+            staffing=sample_solution_output["staffing"],
+            rate_card=rate_card,
+            estimated_value=5000000.0,
+        )
+        assert result.get("over_budget", False) is False
+
+    def test_no_estimated_value_skips_price_to_win(self, sample_solution_output):
+        rate_card = {
+            "Project Manager": {"hourly": 95},
+            "Cloud Architect": {"hourly": 110},
+            "Senior Developer": {"hourly": 75},
+            "Developer": {"hourly": 55},
+            "QA Engineer": {"hourly": 50},
+        }
+        result = self.agent.calculate_costs(
+            staffing=sample_solution_output["staffing"],
+            rate_card=rate_card,
+        )
+        assert result.get("over_budget", False) is False
+        assert "value_engineered" not in result
+
+    def test_competitor_intel_adjusts_margin(self, sample_solution_output):
+        rate_card = {
+            "Project Manager": {"hourly": 95},
+            "Cloud Architect": {"hourly": 110},
+            "Senior Developer": {"hourly": 75},
+            "Developer": {"hourly": 55},
+            "QA Engineer": {"hourly": 50},
+        }
+        result_no_comp = self.agent.calculate_costs(
+            staffing=sample_solution_output["staffing"],
+            rate_card=rate_card,
+        )
+        result_with_comp = self.agent.calculate_costs(
+            staffing=sample_solution_output["staffing"],
+            rate_card=rate_card,
+            competitor_avg=450000.0,
+        )
+        assert result_with_comp["total_with_margin"] <= result_no_comp["total_with_margin"]
+
+
+class TestValidateOutputPriceToWin:
+    def test_accepts_value_engineered_field(self):
+        agent = CostAgent.__new__(CostAgent)
+        raw = json.dumps({
+            "labor_costs": {"roles": [], "subtotal": 0},
+            "other_costs": [],
+            "total": 0,
+            "narrative": "x",
+            "confidence": 0.5,
+            "value_engineered": True,
+            "pricing_strategy": "competitive",
+        })
+        result = agent.validate_output(raw)
+        assert result["value_engineered"] is True
+        assert result["pricing_strategy"] == "competitive"
+
+    def test_accepts_without_optional_fields(self):
+        agent = CostAgent.__new__(CostAgent)
+        raw = json.dumps({
+            "labor_costs": {"roles": [], "subtotal": 0},
+            "other_costs": [],
+            "total": 0,
+            "narrative": "x",
+            "confidence": 0.5,
+        })
+        result = agent.validate_output(raw)
+        assert "value_engineered" not in result
+
+
 class TestAgentAttributes:
     def test_agent_type(self):
         assert CostAgent.agent_type == "cost"

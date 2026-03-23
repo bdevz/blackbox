@@ -24,8 +24,10 @@ class CostAgent(BaseAgent):
         staffing: list[dict],
         rate_card: dict,
         margin: float = DEFAULT_MARGIN,
+        estimated_value: float = None,
+        competitor_avg: float = None,
     ) -> dict:
-        """Deterministic cost calculation: rate * hours * headcount. No LLM involved."""
+        """Deterministic cost calculation with price-to-win adjustments."""
         roles = []
         missing_rates = []
         subtotal = 0.0
@@ -52,11 +54,38 @@ class CostAgent(BaseAgent):
                 "total": total,
             })
 
-        return {
+        # Price-to-win: adjust margin if competitor data available
+        effective_margin = margin
+        if competitor_avg is not None and subtotal > 0:
+            if subtotal * (1 + margin) > competitor_avg:
+                effective_margin = max((competitor_avg / subtotal) - 1, 0.05)
+
+        result = {
             "labor_costs": {"roles": roles, "subtotal": subtotal},
             "missing_rates": missing_rates,
-            "total_with_margin": subtotal * (1 + margin),
+            "total_with_margin": subtotal * (1 + effective_margin),
         }
+
+        # Price-to-win: flag over-budget and compute value-engineered alternative
+        if estimated_value is not None and subtotal * (1 + effective_margin) > estimated_value * 1.1:
+            result["over_budget"] = True
+            target = estimated_value * 0.95
+            scale = target / (subtotal * (1 + effective_margin)) if subtotal > 0 else 1.0
+            ve_roles = []
+            ve_subtotal = 0.0
+            for r in roles:
+                ve_hours = int(r["hours"] * scale)
+                ve_total = r["rate"] * ve_hours * r.get("headcount", 1)
+                ve_subtotal += ve_total
+                ve_roles.append({**r, "hours": ve_hours, "total": ve_total})
+            result["value_engineered"] = {
+                "labor_costs": {"roles": ve_roles, "subtotal": ve_subtotal},
+                "total_with_margin": ve_subtotal * (1 + effective_margin),
+            }
+        else:
+            result["over_budget"] = False
+
+        return result
 
     def inject_context(self, context: dict, db=None) -> dict:
         if db is None:
@@ -77,14 +106,36 @@ class CostAgent(BaseAgent):
 
         context["rate_card"] = rate_card
 
+        # Extract estimated_value from RFP brief
+        rfp_brief = context.get("rfp_brief", {})
+        estimated_value = rfp_brief.get("estimated_value")
+        context["estimated_value"] = float(estimated_value) if estimated_value else None
+
+        # Fetch competitor intel
+        from app.models.database import CompetitorIntel
+        rfp_id = context.get("rfp_id") or rfp_brief.get("rfp_id")
+        competitor_avg = None
+        if rfp_id:
+            competitors = db.query(CompetitorIntel).filter(
+                CompetitorIntel.rfp_id == rfp_id
+            ).all()
+            if competitors:
+                values = [float(c.past_contract_value) for c in competitors if c.past_contract_value]
+                competitor_avg = sum(values) / len(values) if values else None
+                context["competitor_intel"] = [
+                    {"name": c.competitor_name, "value": float(c.past_contract_value) if c.past_contract_value else None}
+                    for c in competitors
+                ]
+
         solution = context.get("solution", {})
         staffing = solution.get("staffing", [])
         computed = self.calculate_costs(
             staffing=staffing,
             rate_card=rate_card,
+            estimated_value=context["estimated_value"],
+            competitor_avg=competitor_avg,
         )
         context["computed_costs"] = computed
-        # Store on self for validate_output to cross-check LLM numbers
         self._computed_costs = computed
 
         return context
@@ -124,6 +175,8 @@ IMPORTANT: The labor_costs roles, rates, hours, totals, and subtotal MUST match 
         rfp_brief = context.get("rfp_brief", {})
         solution = context.get("solution", {})
         computed = context.get("computed_costs", {})
+        estimated_value = context.get("estimated_value")
+        competitor_intel = context.get("competitor_intel", [])
 
         user = f"""## RFP Brief
 {json.dumps(rfp_brief, indent=2)}
@@ -132,7 +185,23 @@ IMPORTANT: The labor_costs roles, rates, hours, totals, and subtotal MUST match 
 {json.dumps(solution.get("staffing", []), indent=2)}
 
 ## Pre-Computed Cost Breakdown (USE THESE EXACT NUMBERS)
-{json.dumps(computed, indent=2)}
+{json.dumps(computed, indent=2)}"""
+
+        if estimated_value:
+            user += f"""
+
+## Budget Context
+Estimated RFP value: ${estimated_value:,.2f}
+{"WARNING: Our pricing exceeds the estimated value. Justify competitiveness or highlight value-engineering trade-offs." if computed.get("over_budget") else "Our pricing is within the estimated budget."}"""
+
+        if competitor_intel:
+            user += f"""
+
+## Competitor Intelligence
+{json.dumps(competitor_intel, indent=2)}
+Position our pricing as competitive against these competitors."""
+
+        user += """
 
 Write the cost justification narrative. Use the pre-computed numbers exactly."""
 
