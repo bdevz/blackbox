@@ -120,3 +120,54 @@ def sample_cost_output():
         "narrative": "## Cost Justification\n\nOur pricing reflects competitive India-based rates...",
         "confidence": 0.90,
     }
+
+
+@pytest.fixture
+def sample_review_output_needs_revision():
+    return {
+        "contradictions": [
+            {
+                "sections": ["solution", "cost"],
+                "issue": "Staffing count mismatch: solution lists 7 people, cost has 5 roles",
+                "severity": "high",
+            },
+            {
+                "sections": ["solution", "compliance"],
+                "issue": "Solution claims CMMI Level 5, compliance only cites Level 3",
+                "severity": "medium",
+            },
+        ],
+        "missing_sections": [],
+        "formatting_issues": [],
+        "quality_score": 0.52,
+        "recommendation": "needs_revision",
+        "confidence": 0.88,
+    }
+
+
+@pytest.fixture
+def sample_review_output_ready():
+    return {
+        "contradictions": [],
+        "missing_sections": [],
+        "formatting_issues": [],
+        "quality_score": 0.92,
+        "recommendation": "ready",
+        "confidence": 0.95,
+    }
+
+
+@pytest.fixture
+def sample_competitor_intel():
+    return [
+        {
+            "competitor_name": "Infosys",
+            "past_contract_value": 2200000.0,
+            "incumbent_years": 3,
+        },
+        {
+            "competitor_name": "TCS",
+            "past_contract_value": 1900000.0,
+            "incumbent_years": 1,
+        },
+    ]
