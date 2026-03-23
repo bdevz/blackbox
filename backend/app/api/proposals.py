@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.models.database import Proposal, RFP, get_db
+from app.workers.tasks import generate_proposal_task
 
 router = APIRouter()
 
@@ -45,7 +46,7 @@ def generate_proposal(rfp_id: UUID, db: Session = Depends(get_db)):
     db.add(proposal)
     db.commit()
     db.refresh(proposal)
-    # TODO: queue LangGraph pipeline as Celery task
+    generate_proposal_task.delay(str(proposal.id))
     return {"id": str(proposal.id), "status": "queued"}
 
 

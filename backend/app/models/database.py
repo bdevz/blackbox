@@ -32,6 +32,7 @@ class ProposalStatus(str, PyEnum):
     submitted = "submitted"
     won = "won"
     lost = "lost"
+    failed = "failed"
 
 
 class Outcome(str, PyEnum):
@@ -79,7 +80,7 @@ class RFP(Base):
     extracted_brief = Column(JSONB)
     qualification_score = Column(Float)
     ingested_at = Column(DateTime(timezone=True))
-    metadata = Column(JSONB, default=dict)
+    meta = Column(JSONB, default=dict)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     proposals = relationship("Proposal", back_populates="rfp")
@@ -147,7 +148,7 @@ class ProposalEmbedding(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     proposal_id = Column(UUID(as_uuid=True), ForeignKey("proposals.id"), nullable=False)
-    embedding = Column(Vector(1536))
+    embedding = Column(Vector(1024))
     section = Column(String(100))
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
