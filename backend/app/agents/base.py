@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import re
 import time
@@ -8,6 +9,8 @@ from anthropic import AsyncAnthropic
 
 from app.config import settings
 from app.models.database import SessionLocal, AgentRun
+
+_api_semaphore = asyncio.Semaphore(settings.max_concurrent_api_calls)
 
 
 @dataclass
@@ -90,15 +93,16 @@ class BaseAgent(ABC):
             system_prompt, user_prompt = self.build_prompt(context)
             prompt_hash = hashlib.sha256(system_prompt.encode()).hexdigest()[:16]
 
-            start = time.monotonic()
-            response = await self.client.messages.create(
-                model=self.model,
-                max_tokens=self.max_tokens,
-                temperature=self.temperature,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}],
-            )
-            duration_ms = int((time.monotonic() - start) * 1000)
+            async with _api_semaphore:
+                start = time.monotonic()
+                response = await self.client.messages.create(
+                    model=self.model,
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature,
+                    system=system_prompt,
+                    messages=[{"role": "user", "content": user_prompt}],
+                )
+                duration_ms = int((time.monotonic() - start) * 1000)
 
             raw_text = response.content[0].text
             raw_text = self._extract_json(raw_text)
