@@ -30,7 +30,7 @@ class TestTier2Filter:
             "opp_key": "abc123",
             "title": "IT Managed Services",
             "description_text": "Need IT services",
-            "due_date": (datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%d"),
+            "due_date": (datetime.now(timezone.utc) + timedelta(days=10)).strftime("%Y-%m-%d"),
             "val_est_low": "100000",
             "val_est_high": "500000",
             "sole_source_flag": False,
@@ -53,6 +53,18 @@ class TestTier2Filter:
         tomorrow = (datetime.now(timezone.utc) + timedelta(days=2)).strftime("%Y-%m-%d")
         opp = self._make_opp(due_date=tomorrow)
         assert passes_tier2_filter(opp, set()) is False
+
+    def test_due_date_too_far_out_rejected(self):
+        """RFPs due more than 15 days out are not urgent enough."""
+        far_out = (datetime.now(timezone.utc) + timedelta(days=45)).strftime("%Y-%m-%d")
+        opp = self._make_opp(due_date=far_out)
+        assert passes_tier2_filter(opp, set()) is False
+
+    def test_due_date_within_window_passes(self):
+        """RFPs due in 10 days should pass."""
+        in_window = (datetime.now(timezone.utc) + timedelta(days=10)).strftime("%Y-%m-%d")
+        opp = self._make_opp(due_date=in_window)
+        assert passes_tier2_filter(opp, set()) is True
 
     def test_too_expensive_rejected(self):
         opp = self._make_opp(val_est_low="3000000")
