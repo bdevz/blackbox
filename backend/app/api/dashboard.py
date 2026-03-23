@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy import func
+from sqlalchemy import func, Integer, case
 from sqlalchemy.orm import Session
 
 from app.models.database import RFP, Proposal, AgentRun, get_db
@@ -21,7 +21,7 @@ def agent_performance(db: Session = Depends(get_db)):
         AgentRun.agent_type,
         func.avg(AgentRun.duration_ms).label("avg_duration_ms"),
         func.count(AgentRun.id).label("total_runs"),
-        func.sum(func.cast(AgentRun.status == "error", db.bind.dialect.name == "postgresql" and "integer" or "int")).label("errors"),
+        func.sum(case((AgentRun.status == "error", 1), else_=0)).label("errors"),
     ).group_by(AgentRun.agent_type).all()
     return [{"agent": r.agent_type, "avg_duration_ms": float(r.avg_duration_ms or 0), "total_runs": r.total_runs} for r in results]
 
