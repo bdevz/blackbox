@@ -27,7 +27,7 @@ def get_rfp(rfp_id: UUID, db: Session = Depends(get_db)):
 @router.post("/upload")
 async def upload_rfp(file: UploadFile = File(...), db: Session = Depends(get_db)):
     content = await file.read()
-    rfp = RFP(title=file.filename or "Untitled", source="manual", metadata={"filename": file.filename, "size": len(content)})
+    rfp = RFP(title=file.filename or "Untitled", source="manual", meta={"filename": file.filename, "size": len(content)})
     db.add(rfp)
     db.commit()
     db.refresh(rfp)
@@ -37,7 +37,7 @@ async def upload_rfp(file: UploadFile = File(...), db: Session = Depends(get_db)
 
 @router.post("/ingest-url")
 def ingest_url(url: str, db: Session = Depends(get_db)):
-    rfp = RFP(title=url, source="manual", metadata={"url": url})
+    rfp = RFP(title=url, source="manual", meta={"url": url})
     db.add(rfp)
     db.commit()
     db.refresh(rfp)
