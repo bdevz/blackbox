@@ -136,6 +136,14 @@ IMPORTANT: The labor_costs roles, rates, hours, totals, and subtotal MUST match 
 
 Write the cost justification narrative. Use the pre-computed numbers exactly."""
 
+        review_feedback = context.get("review_feedback")
+        if review_feedback:
+            user += f"""
+
+## QA Reviewer Feedback (FIX THESE ISSUES)
+The QA reviewer found these issues with your previous output. You MUST fix them:
+{review_feedback}"""
+
         return system, user
 
     def validate_output(self, raw: str) -> dict:

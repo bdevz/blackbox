@@ -80,6 +80,32 @@ class TestBuildPrompt:
         assert sample_rfp_brief["title"] in user
 
 
+class TestReviewFeedbackInPrompt:
+    def setup_method(self):
+        self.agent = SolutionAgent.__new__(SolutionAgent)
+
+    def test_review_feedback_included_in_user_prompt(self, sample_rfp_brief, sample_qualification_output):
+        context = {
+            "rfp_brief": sample_rfp_brief,
+            "qualification": sample_qualification_output,
+            "company_knowledge": [],
+            "similar_proposals": [],
+            "review_feedback": "[HIGH] Staffing count mismatch",
+        }
+        _, user = self.agent.build_prompt(context)
+        assert "Staffing count mismatch" in user
+
+    def test_no_review_feedback_no_section(self, sample_rfp_brief, sample_qualification_output):
+        context = {
+            "rfp_brief": sample_rfp_brief,
+            "qualification": sample_qualification_output,
+            "company_knowledge": [],
+            "similar_proposals": [],
+        }
+        _, user = self.agent.build_prompt(context)
+        assert "QA reviewer found" not in user
+
+
 class TestAgentAttributes:
     def test_agent_type(self):
         assert SolutionAgent.agent_type == "solution"

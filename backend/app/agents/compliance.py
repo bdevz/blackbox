@@ -82,6 +82,14 @@ Respond with ONLY valid JSON (no markdown fences):
 
 Write the compliance narrative for this RFP."""
 
+        review_feedback = context.get("review_feedback")
+        if review_feedback:
+            user += f"""
+
+## QA Reviewer Feedback (FIX THESE ISSUES)
+The QA reviewer found these issues with your previous output. You MUST fix them:
+{review_feedback}"""
+
         return system, user
 
     def validate_output(self, raw: str) -> dict:

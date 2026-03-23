@@ -143,6 +143,30 @@ class TestBuildPrompt:
         assert "ConsultAdd" in system
 
 
+class TestReviewFeedbackInPrompt:
+    def setup_method(self):
+        self.agent = CostAgent.__new__(CostAgent)
+
+    def test_review_feedback_included_in_user_prompt(self, sample_rfp_brief, sample_solution_output):
+        context = {
+            "rfp_brief": sample_rfp_brief,
+            "solution": sample_solution_output,
+            "computed_costs": {"labor_costs": {"roles": [], "subtotal": 0}, "missing_rates": [], "total_with_margin": 0},
+            "review_feedback": "[HIGH] Costs exceed budget by 40%",
+        }
+        _, user = self.agent.build_prompt(context)
+        assert "Costs exceed budget" in user
+
+    def test_no_review_feedback_no_section(self, sample_rfp_brief, sample_solution_output):
+        context = {
+            "rfp_brief": sample_rfp_brief,
+            "solution": sample_solution_output,
+            "computed_costs": {"labor_costs": {"roles": [], "subtotal": 0}, "missing_rates": [], "total_with_margin": 0},
+        }
+        _, user = self.agent.build_prompt(context)
+        assert "QA reviewer found" not in user
+
+
 class TestAgentAttributes:
     def test_agent_type(self):
         assert CostAgent.agent_type == "cost"
