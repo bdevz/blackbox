@@ -153,6 +153,13 @@ def ingest_rfp_task(rfp_id: str, file_content_b64: str = None, filename: str = N
 
 
 @celery_app.task
+def fetch_highergov_rfps_task(captured_date: str = None):
+    """Periodic task: fetch, filter, and score RFPs from HigherGov."""
+    from app.integrations.highergov import fetch_and_filter
+    return asyncio.run(fetch_and_filter(captured_date=captured_date))
+
+
+@celery_app.task
 def sync_hubspot_outcomes_task():
     """Periodic task: sync outcomes from HubSpot."""
     from app.integrations.hubspot_sync import sync_outcomes

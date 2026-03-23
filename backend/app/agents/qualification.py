@@ -4,11 +4,37 @@ from app.agents.base import BaseAgent
 from app.models.database import CompanyKnowledge
 
 
-CONSULTADD_CONTEXT = """ConsultAdd is a 30-person IT consulting company based in India.
-- Targets state and local government RFPs only (no federal)
-- Wins on competitive cost, not boutique quality
-- Current win rate: 3-4% (volume strategy — more at-bats = more wins)
-- Goal: 10x proposal volume (100 → 1,000 RFPs/month) with same headcount"""
+CONSULTADD_CONTEXT = """ConsultAdd is a 600-person enterprise technology firm (300 US, 300 India).
+Headquarters: 175 Greenwich St, 38th Floor, New York, NY.
+15+ years in business. 200+ successful government projects delivered. 98% on-time/on-budget.
+350+ specialized field consultants deployed nationwide.
+
+Services:
+- IT Managed Services (MSP), IT Consulting, IT Staffing
+- Cloud Migration & Services (AWS, Azure) with FedRAMP compliance
+- Cybersecurity & Managed Security Services (FISMA, NIST)
+- Data Analytics & Data Migration
+- Legacy Modernization & Application Development
+- Enterprise System Implementation (Oracle, SAP, Microsoft ERP, Salesforce)
+- Digital Accessibility Services
+
+Certifications & Compliance:
+- ISO 27001, SOC 2 Type II, CMMC Level I
+- GSA Schedule holder
+- CMAS (California cooperative purchasing)
+- USPAACC certified
+
+Technology Partnerships:
+- AWS Advanced Partner, Microsoft Partner, Oracle Partner
+- Salesforce Partner, IBM Silver Partner
+
+Past Performance (state & local):
+- Ohio Department of Natural Resources, New Jersey state agencies
+- Orange County, Macomb County, Social Security Administration
+- Multiple state DOT, DAS, and university systems
+
+Sweet spot: $100K–$500K SLED contracts in IT professional services.
+Competitive advantage: India delivery center for cost efficiency + 350 US consultants for on-site work."""
 
 
 class QualificationAgent(BaseAgent):
