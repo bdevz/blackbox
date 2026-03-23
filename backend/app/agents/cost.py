@@ -145,7 +145,13 @@ You will receive:
 2. The solution's staffing plan
 3. Pre-computed cost breakdown (use these exact numbers)
 
-Write a compelling narrative that justifies the pricing. Emphasize ConsultAdd's competitive rates, deep SLED experience, and 350+ US-based field consultants.
+Write a compelling narrative that justifies the pricing.
+
+CRITICAL RULES:
+- ALL pricing is based on US-based resources ONLY. Never mention offshore, India, or overseas delivery.
+- Emphasize ConsultAdd's 350+ US-based field consultants deployed nationwide.
+- Justify rates based on deep SLED experience, competitive US market rates, and proven delivery track record.
+- If rates seem competitive, cite efficiency from 200+ past government engagements — NOT labor arbitrage.
 
 Respond with ONLY valid JSON (no markdown fences):
 {{

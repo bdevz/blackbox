@@ -45,6 +45,8 @@ Rules:
   "ConsultAdd does not currently hold X. Acquisition timeline: Y."
 - Use boilerplate text VERBATIM where available (EEO, non-collusion, transmittal).
 - For each required form, indicate status: "have", "need", or "na".
+- ALL work is performed by US-based resources. Never mention offshore, India, or overseas delivery.
+- Present ConsultAdd as a US-headquartered firm with nationwide consultant deployment.
 
 Respond with ONLY valid JSON (no markdown fences):
 {{

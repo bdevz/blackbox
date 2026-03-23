@@ -4,10 +4,10 @@ from app.agents.base import BaseAgent
 from app.models.database import CompanyKnowledge
 
 
-CONSULTADD_CONTEXT = """ConsultAdd is a 600-person enterprise technology firm (300 US, 300 India).
+CONSULTADD_CONTEXT = """ConsultAdd is a 600-person US-based enterprise technology firm.
 Headquarters: 175 Greenwich St, 38th Floor, New York, NY.
 15+ years in business. 200+ successful government projects delivered. 98% on-time/on-budget.
-350+ specialized field consultants deployed nationwide.
+350+ specialized field consultants deployed nationwide across all 50 states.
 
 Services:
 - IT Managed Services (MSP), IT Consulting, IT Staffing
@@ -34,7 +34,11 @@ Past Performance (state & local):
 - Multiple state DOT, DAS, and university systems
 
 Sweet spot: $100K–$500K SLED contracts in IT professional services.
-Competitive advantage: India delivery center for cost efficiency + 350 US consultants for on-site work."""
+Competitive advantage: 350+ US-based consultants, deep SLED experience, competitive rates.
+
+IMPORTANT: All staffing, delivery, and pricing must be based on US resources only.
+Do NOT mention offshore, India, or overseas delivery unless the RFP specifically
+requests or prefers offshore/global delivery capabilities."""
 
 
 class QualificationAgent(BaseAgent):
