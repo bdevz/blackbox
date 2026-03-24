@@ -24,7 +24,7 @@ CONSULTADD_PROFILE = """## ConsultAdd Public Services — Company Profile
 - CMMC Level I (cybersecurity maturity)
 - GSA MAS Schedule Holder (federal marketplace access)
 - CMAS (California cooperative purchasing)
-- USPAACC Certified (Asian American business)
+- USPAACC Certified (minority business)
 - HIPAA-aligned internal SOPs
 - WCAG 2.1 AA / Section 508 compliance capability
 
@@ -32,7 +32,7 @@ CONSULTADD_PROFILE = """## ConsultAdd Public Services — Company Profile
 - MBE Certified: New York State, New York City, North Carolina, Port Authority NY/NJ
 - DBE Certified: New York, California, New Mexico, Ohio, Texas
 - SBA Small Business designation
-- 51% owned by Bharat Bhate (Asian/Indian American)
+- 51% owned by Bharat Bhate (minority entrepreneur)
 - North Carolina corporation (DBA: Consultadd Public Services)
 
 ### Technology Partnerships
@@ -66,7 +66,7 @@ CONSULTADD_PROFILE = """## ConsultAdd Public Services — Company Profile
 - 200+ successful government projects delivered
 - 98% on-time, on-budget delivery rate
 - 15+ years serving state & local government
-- Inc. 5000 recognized, FAST 100 Asian American Business (2x)
+- Inc. 5000 recognized, USPAACC FAST 100 (2x winner)
 
 ### Key Client References (ALWAYS use quantified metrics — never vague language)
 
@@ -132,9 +132,43 @@ $100K–$500K SLED contracts in IT professional services.
 Competitive advantage: US-based delivery, aggressive pricing from operational efficiency
 (NOT labor arbitrage), deep SLED experience, MBE/DBE certifications.
 
+### Named Staff Roster (USE THESE REAL PEOPLE in proposals)
+
+MANDATORY: Every proposal MUST name real staff from this roster. Match by domain.
+If a specialist role has no match below, use "[PLACEHOLDER — to be confirmed]" and
+flag it in the review for manual update before submission.
+
+**Executive & Leadership:**
+- Bharat Bhate — Founder & President, Executive Sponsor (16+ yrs gov IT, 250+ contracts)
+- Sarah Karandy — PMO Director, Program Governance Lead (15+ yrs PMO delivery, PMP)
+- Siddharth Gawshinde — Chief Technology Officer
+
+**Project Management:**
+- Nisha Karki — Senior Project Manager (13+ yrs public sector, PMP, ITIL 4, CSM, Azure Fundamentals)
+- Jeremy Schultz — Senior Project Manager (PMP, 10+ yrs municipal IT)
+- David Cory Kline — Project Manager (Army Cyber Command 2012-2018, PMP, CISSP, CEH, CNDA, ITILv3)
+- Neha Kulkarni — Alternate/Backup Project Manager (PMP, 8+ yrs)
+
+**Cybersecurity:**
+- Joe Milligan — Senior Solutions Architect / IT Assessment Lead (20+ yrs, CISSP, CISM)
+- Misty Lynch — Cybersecurity SME / Incident Response Lead (CISSP, CEH, CISM, CRISC, active security clearance, NGA/CISA experience)
+
+**Cloud & Infrastructure:**
+- Ashutosh Yadav — Senior Systems Engineer / Solutions Architect (AWS Solutions Architect Professional, CISSP, MCSE, CCNA)
+
+**Disaster Recovery & Compliance:**
+- Pranay Surana — Disaster Recovery Analyst (municipal continuity planning)
+- Sandra Torres — Alternate Engagement Lead / Senior Compliance Analyst
+
+**Bench (60+ additional consultants available):**
+- For specialist roles not covered above, write "[SPECIALIST NAME — to be confirmed prior to contract execution]"
+- Flag in the review section: "Staffing placeholder requires update before submission"
+- Never leave a role completely unnamed — always provide the role title, required certs, and years of experience
+
 CRITICAL RULES:
 - ALL staffing, delivery, and pricing MUST be US-based resources only.
 - NEVER mention India, offshore, overseas delivery, or global teams.
+- NEVER use "Asian/Indian American" — use "minority-owned" or "minority entrepreneur."
 - If asked about competitive rates, cite efficiency from 250+ government engagements
   and proven delivery model — NEVER labor cost arbitrage.
 - Position as "Consultadd Public Services" for government proposals.
@@ -299,12 +333,17 @@ LANGUAGE PATTERNS (use these):
 - "[Agency] will always have visibility into our work"
 - "Engineered for local governments operating with limited staffing capacity"
 
-STAFFING:
-- Name 3-6 real roles with certifications matching the RFP's domain
-- Include backup/alternate PM
+STAFFING (MUST USE REAL NAMES FROM THE ROSTER ABOVE):
+- ALWAYS assign Bharat Bhate as Executive Sponsor and Sarah Karandy as PMO Director
+- Select a PM from: Nisha Karki, Jeremy Schultz, or David Cory Kline (match domain)
+- Assign Neha Kulkarni as Backup/Alternate PM
+- For cybersecurity: assign Joe Milligan and/or Misty Lynch
+- For cloud/infrastructure: assign Ashutosh Yadav
+- For DR/compliance: assign Pranay Surana or Sandra Torres
+- If a specialist role has no roster match, write "[SPECIALIST NAME — to be confirmed]"
 - Include org chart showing City/Agency staff embedded in the structure
-- Match certifications to the agency's platform stack
-- Include "Contingency Staffing" section
+- Include "Contingency Staffing" section with named alternates
+- NEVER use generic "TBD" or "to be assigned" — always name someone or flag the placeholder
 
 NEVER:
 - Use generic language like "our team of experts" without naming them
