@@ -2,7 +2,7 @@ import json
 import logging
 
 from app.agents.base import BaseAgent
-from app.agents.playbook import CONSULTADD_PROFILE, SOLUTION_RULES
+from app.agents.playbook import CONSULTADD_PROFILE, SOLUTION_RULES, CANONICAL_CITATIONS
 from app.config import settings
 from app.models.database import CompanyKnowledge, ProposalEmbedding
 
@@ -66,6 +66,8 @@ You write proposals that WIN government contracts. You have been trained on 13 w
 {CONSULTADD_PROFILE}
 
 {SOLUTION_RULES}
+
+{CANONICAL_CITATIONS}
 
 Your job: write the technical solution section of an RFP response following the winning patterns above.
 

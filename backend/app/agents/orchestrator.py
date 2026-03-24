@@ -41,17 +41,22 @@ async def qualify_node(state: ProposalState) -> ProposalState:
 
 
 async def solution_comply_node(state: ProposalState) -> ProposalState:
+    # Run solution FIRST so compliance can see the staffing plan
     sol_agent = SolutionAgent()
+    sol_result = await sol_agent.run(
+        {"rfp_brief": state["rfp_brief"], "qualification": state["qualification"]},
+        proposal_id=state.get("proposal_id"),
+    )
+
+    # Pass solution output to compliance so it mirrors the same staffing/team
     comp_agent = ComplianceAgent()
-    sol_result, comp_result = await asyncio.gather(
-        sol_agent.run(
-            {"rfp_brief": state["rfp_brief"], "qualification": state["qualification"]},
-            proposal_id=state.get("proposal_id"),
-        ),
-        comp_agent.run(
-            {"rfp_brief": state["rfp_brief"], "qualification": state["qualification"]},
-            proposal_id=state.get("proposal_id"),
-        ),
+    comp_result = await comp_agent.run(
+        {
+            "rfp_brief": state["rfp_brief"],
+            "qualification": state["qualification"],
+            "solution": sol_result.output,  # Compliance sees the solution
+        },
+        proposal_id=state.get("proposal_id"),
     )
     return {
         "solution": sol_result.output,
@@ -122,62 +127,68 @@ def _build_review_feedback(review: dict, section: str) -> str:
 
 
 async def revision_node(state: ProposalState) -> ProposalState:
-    """Re-run affected agents with review feedback. Always re-run cost after solution changes."""
+    """Re-run all content agents with full review feedback for cross-section consistency.
+
+    Key insight from proposal analysis: contradictions arise from agents not seeing
+    each other's output. The revision node re-runs solution first, then passes the
+    revised solution to compliance, then re-runs cost with the revised solution.
+    This ensures cross-section consistency.
+    """
     review = state.get("review", {})
-    affected = _extract_affected_sections(review)
     revision_count = state.get("revision_count", 0) + 1
+
+    # Build comprehensive feedback from ALL review findings
+    all_feedback_parts = []
+    for c in review.get("contradictions", []):
+        all_feedback_parts.append(f"[{c['severity'].upper()}] {c['issue']}")
+    for m in review.get("missing_sections", []):
+        all_feedback_parts.append(f"[MISSING] {m}")
+    for v in review.get("playbook_violations", []):
+        sev = v.get("severity", "medium").upper()
+        all_feedback_parts.append(f"[{sev}] {v.get('pattern', '')}: {v.get('violation', '')} — FIX: {v.get('fix', '')}")
+    for f in review.get("formatting_issues", []):
+        all_feedback_parts.append(f"[FORMAT] {f}")
+    all_feedback = "\n".join(all_feedback_parts)
 
     update: dict = {"revision_count": revision_count, "status": f"revision_{revision_count}"}
 
-    tasks = []
-    task_keys = []
+    # Step 1: Re-run solution with ALL review feedback
+    sol_agent = SolutionAgent()
+    sol_result = await sol_agent.run(
+        {
+            "rfp_brief": state["rfp_brief"],
+            "qualification": state["qualification"],
+            "review_feedback": all_feedback,
+        },
+        proposal_id=state.get("proposal_id"),
+    )
+    update["solution"] = sol_result.output
 
-    if "solution" in affected:
-        sol_agent = SolutionAgent()
-        feedback = _build_review_feedback(review, "solution")
-        tasks.append(sol_agent.run(
-            {
-                "rfp_brief": state["rfp_brief"],
-                "qualification": state["qualification"],
-                "review_feedback": feedback,
-            },
-            proposal_id=state.get("proposal_id"),
-        ))
-        task_keys.append("solution")
+    # Step 2: Re-run compliance with revised solution + review feedback
+    comp_agent = ComplianceAgent()
+    comp_result = await comp_agent.run(
+        {
+            "rfp_brief": state["rfp_brief"],
+            "qualification": state["qualification"],
+            "solution": sol_result.output,  # Pass revised solution for consistency
+            "review_feedback": all_feedback,
+        },
+        proposal_id=state.get("proposal_id"),
+    )
+    update["compliance"] = comp_result.output
 
-    if "compliance" in affected:
-        comp_agent = ComplianceAgent()
-        feedback = _build_review_feedback(review, "compliance")
-        tasks.append(comp_agent.run(
-            {
-                "rfp_brief": state["rfp_brief"],
-                "qualification": state["qualification"],
-                "review_feedback": feedback,
-            },
-            proposal_id=state.get("proposal_id"),
-        ))
-        task_keys.append("compliance")
-
-    if tasks:
-        results = await asyncio.gather(*tasks)
-        for key, result in zip(task_keys, results):
-            update[key] = result.output
-
-    # Always re-run cost if solution was revised (staffing may have changed)
-    if "solution" in affected or "cost" in affected:
-        cost_agent = CostAgent()
-        solution = update.get("solution", state.get("solution", {}))
-        cost_feedback = _build_review_feedback(review, "cost")
-        cost_result = await cost_agent.run(
-            {
-                "rfp_id": state.get("rfp_id"),
-                "rfp_brief": state["rfp_brief"],
-                "solution": solution,
-                "review_feedback": cost_feedback,
-            },
-            proposal_id=state.get("proposal_id"),
-        )
-        update["cost"] = cost_result.output
+    # Step 3: Re-run cost with revised solution
+    cost_agent = CostAgent()
+    cost_result = await cost_agent.run(
+        {
+            "rfp_id": state.get("rfp_id"),
+            "rfp_brief": state["rfp_brief"],
+            "solution": sol_result.output,  # Use revised solution staffing
+            "review_feedback": all_feedback,
+        },
+        proposal_id=state.get("proposal_id"),
+    )
+    update["cost"] = cost_result.output
 
     return update
 

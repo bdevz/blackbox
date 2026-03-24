@@ -285,6 +285,45 @@ Do NOT oversell — keep it as a brief value-add section."""
 
 
 # ---------------------------------------------------------------------------
+# CANONICAL REFERENCES — use these exact versions to prevent cross-section inconsistencies
+# ---------------------------------------------------------------------------
+
+CANONICAL_CITATIONS = """## Canonical Regulation & Standard Versions (USE THESE EXACTLY)
+
+CRITICAL: All agents MUST use these exact version numbers. Cross-section inconsistency
+in version numbers is a scoring penalty in government proposals.
+
+### Cybersecurity Standards
+- CJIS Security Policy: **v5.9.5** (current as of 2025)
+- NIST Cybersecurity Framework: **CSF 2.0** (released Feb 2024)
+- NIST SP 800-53: **Rev. 5** (September 2020, updated Dec 2024)
+- NIST SP 800-63B: **Rev. 3** (Digital Identity Guidelines, Authentication)
+  - Citation format: "NIST SP 800-63B (part of the NIST SP 800-63-3 suite)"
+- FIPS 140: **FIPS 140-3** (current; FIPS 140-2 sunset March 2026)
+  - Always use FIPS 140-3 unless the RFP explicitly references FIPS 140-2
+- NIST SP 800-171: **Rev. 3** (CUI protection)
+
+### Compliance Frameworks
+- HIPAA: **45 CFR Parts 160 and 164** (Security Rule + Privacy Rule)
+- FERPA: **34 CFR Part 99**
+- PCI DSS: **v4.0.1** (effective March 2025)
+- FISMA: Reference as "FISMA 2014 (44 U.S.C. § 3551 et seq.)"
+- Section 508: **ICT Standards (36 CFR Part 1194)**, cite alongside **WCAG 2.1 AA**
+
+### Federal Procurement
+- 2 CFR §200.321: Contracting with small and minority businesses
+- HUD Procurement Handbook: **7460.8 REV 2**
+- FAR Part 15: Contracting by negotiation (competitive proposals)
+
+### Data Residency (standard language)
+"All data is hosted within the United States using FedRAMP-authorized infrastructure.
+ConsultAdd utilizes AWS GovCloud and Azure Government environments that ensure data
+remains within U.S. borders, managed exclusively by U.S. persons, in compliance with
+CJIS, ITAR, and applicable state data residency requirements."
+"""
+
+
+# ---------------------------------------------------------------------------
 # AGENT-SPECIFIC INSTRUCTIONS
 # ---------------------------------------------------------------------------
 

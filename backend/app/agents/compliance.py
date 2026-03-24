@@ -1,7 +1,7 @@
 import json
 
 from app.agents.base import BaseAgent
-from app.agents.playbook import CONSULTADD_PROFILE, COMPLIANCE_RULES
+from app.agents.playbook import CONSULTADD_PROFILE, COMPLIANCE_RULES, CANONICAL_CITATIONS
 from app.models.database import CompanyKnowledge
 
 
@@ -41,6 +41,8 @@ You write compliance sections that WIN government contracts. Trained on 13 winni
 
 {COMPLIANCE_RULES}
 
+{CANONICAL_CITATIONS}
+
 Your job: write the compliance narrative and produce a forms checklist.
 
 Rules:
@@ -75,11 +77,25 @@ Respond with ONLY valid JSON (no markdown fences):
         certs = context.get("certifications", [])
         boilerplate = context.get("boilerplate", [])
 
+        solution = context.get("solution", {})
+        staffing_plan = solution.get("staffing_plan", "") if solution else ""
+        staffing = solution.get("staffing", []) if solution else []
+
         user = f"""## RFP Brief
 {json.dumps(rfp_brief, indent=2)}
 
 ## Qualification Assessment
 {json.dumps(qualification, indent=2)}
+
+## Solution Staffing Plan (MIRROR THIS — use the same team names and roles)
+{staffing_plan if staffing_plan else "Not yet available."}
+
+## Solution Staffing Array
+{json.dumps(staffing, indent=2) if staffing else "Not yet available."}
+
+IMPORTANT: If a staffing plan is provided above, your compliance narrative MUST reference
+the same team members by name and role. Do NOT create a different team or different role titles.
+Use the exact same names, certifications, and titles from the solution section.
 
 ## ConsultAdd's Certifications
 {json.dumps(certs, indent=2) if certs else "No certification data available."}
