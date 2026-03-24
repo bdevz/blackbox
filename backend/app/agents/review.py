@@ -87,7 +87,7 @@ Review this proposal for contradictions, missing sections, and formatting issues
         if not isinstance(data["contradictions"], list):
             raise ValueError("'contradictions' must be a list")
 
-        valid_severities = {"high", "medium", "low"}
+        valid_severities = {"critical", "high", "medium", "low"}
         for i, c in enumerate(data["contradictions"]):
             if not isinstance(c, dict):
                 raise ValueError(f"contradictions[{i}] must be a dict")

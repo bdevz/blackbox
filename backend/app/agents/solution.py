@@ -2,7 +2,7 @@ import json
 import logging
 
 from app.agents.base import BaseAgent
-from app.agents.playbook import CONSULTADD_PROFILE, WINNING_PLAYBOOK, SOLUTION_RULES
+from app.agents.playbook import CONSULTADD_PROFILE, SOLUTION_RULES
 from app.config import settings
 from app.models.database import CompanyKnowledge, ProposalEmbedding
 
@@ -17,6 +17,8 @@ class SolutionAgent(BaseAgent):
 
     def _find_similar_proposals(self, rfp_brief: dict, db) -> list[dict]:
         """Query pgvector for similar past proposals using Voyage embeddings."""
+        if not settings.voyage_api_key:
+            return []  # Skip entirely if no API key — avoids timeout
         try:
             import voyageai
 
@@ -36,7 +38,7 @@ class SolutionAgent(BaseAgent):
                 for r in results
             ]
         except Exception as e:
-            logger.warning(f"Similar proposal lookup failed (expected if no embeddings exist): {e}")
+            logger.warning(f"Similar proposal lookup failed: {e}")
             return []
 
     def inject_context(self, context: dict, db=None) -> dict:
@@ -64,8 +66,6 @@ You write proposals that WIN government contracts. You have been trained on 13 w
 {CONSULTADD_PROFILE}
 
 {SOLUTION_RULES}
-
-{WINNING_PLAYBOOK}
 
 Your job: write the technical solution section of an RFP response following the winning patterns above.
 
