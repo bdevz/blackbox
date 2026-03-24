@@ -10,6 +10,7 @@ from app.agents.solution import SolutionAgent
 from app.agents.compliance import ComplianceAgent
 from app.agents.cost import CostAgent
 from app.agents.review import ReviewAgent
+from app.agents.reconcile import ReconcileAgent
 
 
 class ProposalState(TypedDict, total=False):
@@ -197,6 +198,65 @@ async def revision_node(state: ProposalState) -> ProposalState:
     return update
 
 
+async def reconcile_node(state: ProposalState) -> ProposalState:
+    """Single-pass reconciliation that reads ALL sections together and fixes inconsistencies.
+
+    Runs ONCE after the final review (outside the revision loop).
+    Uses solution as source of truth for scope/staffing, cost for numbers,
+    and canonical citations for standards.
+    """
+    review = state.get("review", {})
+
+    # Only reconcile if review found issues
+    contradictions = review.get("contradictions", [])
+    violations = review.get("playbook_violations", [])
+    high_issues = [c for c in contradictions if c.get("severity") in ("high", "critical")]
+    high_violations = [v for v in violations if v.get("severity") in ("high", "critical")]
+
+    if not high_issues and not high_violations:
+        return {"status": "reconciled"}  # Nothing to fix
+
+    agent = ReconcileAgent()
+    result = await agent.run(
+        {
+            "rfp_brief": state.get("rfp_brief", {}),
+            "solution": state.get("solution", {}),
+            "compliance": state.get("compliance", {}),
+            "cost": state.get("cost", {}),
+            "review": review,
+        },
+        proposal_id=state.get("proposal_id"),
+    )
+
+    output = result.output
+    update: dict = {"status": "reconciled"}
+
+    # Apply patches to solution
+    sol_patches = output.get("solution_patches", {})
+    if sol_patches:
+        solution = dict(state.get("solution", {}))
+        for field in ("approach", "staffing_plan", "timeline"):
+            if sol_patches.get(field):
+                solution[field] = sol_patches[field]
+        update["solution"] = solution
+
+    # Apply patches to compliance
+    comp_patches = output.get("compliance_patches", {})
+    if comp_patches and comp_patches.get("narrative"):
+        compliance = dict(state.get("compliance", {}))
+        compliance["narrative"] = comp_patches["narrative"]
+        update["compliance"] = compliance
+
+    # Apply patches to cost
+    cost_patches = output.get("cost_patches", {})
+    if cost_patches and cost_patches.get("narrative"):
+        cost = dict(state.get("cost", {}))
+        cost["narrative"] = cost_patches["narrative"]
+        update["cost"] = cost
+
+    return update
+
+
 def build_graph():
     graph = StateGraph(ProposalState)
 
@@ -205,6 +265,7 @@ def build_graph():
     graph.add_node("cost", cost_node)
     graph.add_node("review", review_node)
     graph.add_node("revision", revision_node)
+    graph.add_node("reconcile", reconcile_node)
 
     graph.set_entry_point("qualify")
 
@@ -216,9 +277,12 @@ def build_graph():
     graph.add_edge("cost", "review")
     graph.add_conditional_edges(
         "review", should_revise,
-        {"revise": "revision", "end": END},
+        {"revise": "revision", "end": "reconcile"},
     )
-    graph.add_edge("revision", "cost")
+    # Revision goes back to review (revision already re-runs cost internally)
+    graph.add_edge("revision", "review")
+    # Reconcile is the final step before END
+    graph.add_edge("reconcile", END)
 
     return graph.compile()
 

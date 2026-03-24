@@ -37,5 +37,5 @@ class TestGraphStructure:
 
     def test_graph_has_expected_nodes(self):
         node_names = set(proposal_graph.get_graph().nodes.keys())
-        expected = {"__start__", "__end__", "qualify", "solution_comply", "cost", "review", "revision"}
+        expected = {"__start__", "__end__", "qualify", "solution_comply", "cost", "review", "revision", "reconcile"}
         assert expected.issubset(node_names)
