@@ -107,7 +107,7 @@ class TestAgentAttributes:
         assert ComplianceAgent.agent_type == "comply"
 
     def test_model(self):
-        assert ComplianceAgent.model == "claude-opus-4-6"
+        assert ComplianceAgent.model == "claude-sonnet-4-6"
 
     def test_temperature(self):
         assert ComplianceAgent.temperature == 0.2

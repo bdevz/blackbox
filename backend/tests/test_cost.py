@@ -25,15 +25,17 @@ class TestCalculateCosts:
         assert pm["total"] == 91200.0
         assert result["missing_rates"] == []
 
-    def test_missing_role_in_rate_card(self):
+    def test_missing_role_uses_fallback_rate(self):
+        """Roles with no match use the average rate as fallback."""
         result = CostAgent.__new__(CostAgent).calculate_costs(
-            staffing=[{"role": "Data Scientist", "hours": 500, "headcount": 1}],
-            rate_card={"Developer": {"hourly": 55}},
+            staffing=[{"role": "Underwater Basket Weaver", "hours": 500, "headcount": 1}],
+            rate_card={"Developer": {"hourly": 55}, "Manager": {"hourly": 100}},
         )
-        assert "Data Scientist" in result["missing_rates"]
-        ds_role = result["labor_costs"]["roles"][0]
-        assert ds_role["rate"] == 0
-        assert ds_role["total"] == 0
+        assert "Underwater Basket Weaver" in result["missing_rates"]
+        role = result["labor_costs"]["roles"][0]
+        # Fallback rate = average of 55 and 100 = 77.5
+        assert role["rate"] == 77.5
+        assert role["total"] == 77.5 * 500
 
     def test_empty_staffing(self):
         result = CostAgent.__new__(CostAgent).calculate_costs(

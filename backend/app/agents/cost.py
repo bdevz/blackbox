@@ -11,6 +11,27 @@ class CostAgent(BaseAgent):
     agent_type = "cost"
     model = "claude-sonnet-4-6"
     temperature = 0.2
+    max_tokens = 8192
+
+    @staticmethod
+    def _fuzzy_match_role(role: str, rate_card: dict) -> str | None:
+        """Find the closest matching role in the rate card by keyword overlap."""
+        role_lower = role.lower()
+        best_match = None
+        best_score = 0
+        for card_role in rate_card:
+            card_lower = card_role.lower()
+            # Exact match
+            if card_lower == role_lower:
+                return card_role
+            # Word overlap score
+            role_words = set(role_lower.split())
+            card_words = set(card_lower.split())
+            overlap = len(role_words & card_words)
+            if overlap > best_score:
+                best_score = overlap
+                best_match = card_role
+        return best_match if best_score > 0 else None
 
     def calculate_costs(
         self,
@@ -25,6 +46,14 @@ class CostAgent(BaseAgent):
         missing_rates = []
         subtotal = 0.0
 
+        # Default fallback rate if no match found
+        all_rates = []
+        for v in rate_card.values():
+            r = float(v.get("hourly", v) if isinstance(v, dict) else v)
+            if r > 0:
+                all_rates.append(r)
+        fallback_rate = sum(all_rates) / len(all_rates) if all_rates else 120.0
+
         for entry in staffing:
             role = entry["role"]
             hours = entry["hours"]
@@ -32,9 +61,15 @@ class CostAgent(BaseAgent):
 
             rate_info = rate_card.get(role)
             if rate_info is None:
-                missing_rates.append(role)
-                hourly_rate = 0.0
-            else:
+                # Try fuzzy match
+                matched = self._fuzzy_match_role(role, rate_card)
+                if matched:
+                    rate_info = rate_card[matched]
+                else:
+                    missing_rates.append(role)
+                    hourly_rate = fallback_rate
+
+            if rate_info is not None:
                 hourly_rate = float(rate_info.get("hourly", rate_info) if isinstance(rate_info, dict) else rate_info)
 
             total = hourly_rate * hours * headcount

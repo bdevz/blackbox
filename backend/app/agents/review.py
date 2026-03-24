@@ -8,6 +8,7 @@ class ReviewAgent(BaseAgent):
     agent_type = "review"
     model = "claude-sonnet-4-6"
     temperature = 0.1
+    max_tokens = 8192
 
     def build_prompt(self, context: dict) -> tuple[str, str]:
         system = f"""You are a proposal QA reviewer for ConsultAdd Public Services.
