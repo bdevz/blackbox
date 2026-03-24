@@ -59,7 +59,7 @@ class TestValidateOutput:
     def test_invalid_severity(self):
         raw = json.dumps({
             "contradictions": [
-                {"sections": ["a", "b"], "issue": "x", "severity": "critical"}
+                {"sections": ["a", "b"], "issue": "x", "severity": "catastrophic"}
             ],
             "missing_sections": [], "formatting_issues": [],
             "quality_score": 0.5, "recommendation": "ready", "confidence": 0.5,
