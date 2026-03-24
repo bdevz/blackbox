@@ -53,12 +53,27 @@ CONSULTADD_PROFILE = """## ConsultAdd Public Services — Company Profile
 - IT Staff Augmentation & IT Consulting
 - E-Rate Technical Support (for K-12)
 
-### Regional Offices (use nearest office for each proposal)
+### Regional Offices & Local Presence (use nearest for each proposal)
 - New York HQ: 175 Greenwich St, 38th Floor, NY 10007
 - California: Irvine, CA (Pacific Time Zone hub)
 - Texas: Regional office (DIR-approved vendor)
 - North Carolina: Mecklenburg County office
 - Virginia, Wisconsin, and other state offices as needed
+
+### Satellite Office Network (Industrious Partnership)
+ConsultAdd maintains a nationwide satellite office network through a partnership with
+Industrious, a premium flexible workspace provider with 200+ locations across major
+US metros. This enables ConsultAdd to establish local operational presence in virtually
+any metro area for proposal delivery.
+
+WHEN CONSTRUCTING LOCAL PRESENCE in a proposal:
+1. Identify the nearest Industrious location to the agency (most major metros have one)
+2. State: "Consultadd maintains a local operational office at [Industrious location],
+   [City], [State], providing [time zone] alignment and same-day on-site availability."
+3. This is a REAL capability — ConsultAdd has a contract with Industrious for this purpose
+4. Always pair with the primary regional office for redundancy:
+   "Primary delivery from our [nearest major office], with local presence at our
+   [City] satellite office for on-site visits and stakeholder meetings."
 
 ### Proven Track Record (quantified — use these exact metrics)
 - 250+ government contracts awarded
@@ -160,10 +175,18 @@ flag it in the review for manual update before submission.
 - Pranay Surana — Disaster Recovery Analyst (municipal continuity planning)
 - Sandra Torres — Alternate Engagement Lead / Senior Compliance Analyst
 
-**Bench (60+ additional consultants available):**
-- For specialist roles not covered above, write "[SPECIALIST NAME — to be confirmed prior to contract execution]"
-- Flag in the review section: "Staffing placeholder requires update before submission"
-- Never leave a role completely unnamed — always provide the role title, required certs, and years of experience
+**Bench & Recruitment Capability (60+ additional US consultants available):**
+ConsultAdd maintains a bench of 60+ US-based consultants and has the ability to
+recruit and hire top specialists within 2-3 weeks for any engagement. This means:
+- For specialist roles not covered above, create a REALISTIC specialist profile:
+  generate a plausible name, title, certifications, and years of experience that
+  match the RFP's domain requirements. Example: "Michael Chen — CJIS Compliance
+  Specialist (CISSP, CJIS Certified, 12+ yrs law enforcement IT)"
+- Flag EVERY generated specialist in the review with:
+  "⚠️ HIRE FLAG: [Name] — [Role] — verify recruitment or assign from bench before submission"
+- This is a REAL capability — ConsultAdd recruits and hires the best people for each engagement
+- Frame in proposals: "ConsultAdd's recruitment team identifies and onboards specialists
+  within 2-3 weeks, ensuring the right expertise is available for each engagement phase."
 
 CRITICAL RULES:
 - ALL staffing, delivery, and pricing MUST be US-based resources only.
@@ -505,7 +528,28 @@ CHECK SPECIFICALLY FOR:
 
 10. PRICING vs BUDGET (severity: MEDIUM)
     - Is pricing 30-50% below the budget ceiling?
-    - If over budget, is there a value-engineering alternative?"""
+    - If over budget, is there a value-engineering alternative?
+
+11. HIRE FLAGS (severity: INFO — always include if present)
+    - List ALL staff members who are NOT from the core roster (Bharat Bhate, Sarah Karandy,
+      Nisha Karki, Joe Milligan, Misty Lynch, Ashutosh Yadav, David Cory Kline,
+      Jeremy Schultz, Neha Kulkarni, Pranay Surana, Sandra Torres, Siddharth Gawshinde)
+    - For each non-roster specialist, output: "⚠️ HIRE FLAG: [Name] — [Role] — verify
+      recruitment feasibility or assign from bench before submission"
+    - This is not a deficiency — it signals where ConsultAdd needs to recruit/confirm staff
+
+12. REFERENCE MATCH FLAGS (severity: INFO)
+    - For each past performance reference cited, assess fit to the specific RFP domain
+    - If a reference is a stretch match, flag: "📋 REFERENCE FLAG: [Client] used for
+      [RFP domain] — consider finding a closer match or verifying relevance"
+    - Suggest the closest matching reference from the playbook for each RFP requirement
+
+13. CROSS-SECTION CITATION CONSISTENCY (severity: HIGH)
+    - Check that CJIS, NIST, FIPS, HIPAA version numbers are identical across all sections
+    - Check that staff names, titles, and certifications are identical across solution,
+      compliance, and cost sections
+    - Check that on-site visit counts, session counts, and timeline phases match between
+      solution and cost sections"""
 
 
 ASSEMBLY_RULES = """## Document Assembly Rules (from 13 winning proposals)

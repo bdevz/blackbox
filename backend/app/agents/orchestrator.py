@@ -68,7 +68,11 @@ async def solution_comply_node(state: ProposalState) -> ProposalState:
 async def cost_node(state: ProposalState) -> ProposalState:
     agent = CostAgent()
     result = await agent.run(
-        {"rfp_brief": state["rfp_brief"], "solution": state["solution"]},
+        {
+            "rfp_id": state.get("rfp_id"),
+            "rfp_brief": state["rfp_brief"],
+            "solution": state["solution"],
+        },
         proposal_id=state.get("proposal_id"),
     )
     return {"cost": result.output, "status": "costing"}
