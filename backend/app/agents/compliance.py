@@ -7,9 +7,9 @@ from app.models.database import CompanyKnowledge
 
 class ComplianceAgent(BaseAgent):
     agent_type = "comply"
-    model = "claude-sonnet-4-6"
+    model = "claude-opus-4-6"
     temperature = 0.2
-    max_tokens = 8192
+    max_tokens = 12000
 
     def inject_context(self, context: dict, db=None) -> dict:
         if db is None:

@@ -140,7 +140,7 @@ class TestAgentAttributes:
         assert ReviewAgent.agent_type == "review"
 
     def test_model(self):
-        assert ReviewAgent.model == "claude-sonnet-4-6"
+                assert ReviewAgent.model == "claude-opus-4-6"
 
     def test_temperature(self):
         assert ReviewAgent.temperature == 0.1

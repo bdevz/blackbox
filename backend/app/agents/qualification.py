@@ -11,7 +11,7 @@ CONSULTADD_CONTEXT = CONSULTADD_PROFILE
 
 class QualificationAgent(BaseAgent):
     agent_type = "qualify"
-    model = "claude-haiku-4-5-20251001"
+    model = "claude-opus-4-6"
     temperature = 0.1
 
     def inject_context(self, context: dict, db=None) -> dict:

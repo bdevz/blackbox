@@ -96,7 +96,7 @@ def should_revise(state: ProposalState) -> str:
     recommendation = review.get("recommendation", "ready")
     revision_count = state.get("revision_count", 0)
 
-    if recommendation == "ready" or revision_count >= 1:
+    if recommendation == "ready" or revision_count >= 2:
         return "end"
     return "revise"
 

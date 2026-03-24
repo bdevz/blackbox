@@ -9,9 +9,9 @@ DEFAULT_MARGIN = 0.15
 
 class CostAgent(BaseAgent):
     agent_type = "cost"
-    model = "claude-sonnet-4-6"
+    model = "claude-opus-4-6"
     temperature = 0.2
-    max_tokens = 8192
+    max_tokens = 12000
 
     @staticmethod
     def _fuzzy_match_role(role: str, rate_card: dict) -> str | None:

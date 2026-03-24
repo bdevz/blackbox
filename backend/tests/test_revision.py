@@ -18,11 +18,11 @@ class TestShouldRevise:
         assert should_revise(state) == "revise"
 
     def test_max_revisions_goes_to_end(self):
-        state = {"review": {"recommendation": "needs_revision"}, "revision_count": 1}
+        state = {"review": {"recommendation": "needs_revision"}, "revision_count": 2}
         assert should_revise(state) == "end"
 
-    def test_revision_count_0_allows_one_revision(self):
-        state = {"review": {"recommendation": "needs_revision"}, "revision_count": 0}
+    def test_revision_count_1_allows_one_more(self):
+        state = {"review": {"recommendation": "needs_revision"}, "revision_count": 1}
         assert should_revise(state) == "revise"
 
     def test_missing_review_goes_to_end(self):

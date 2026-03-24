@@ -273,7 +273,7 @@ class TestAgentAttributes:
         assert CostAgent.agent_type == "cost"
 
     def test_model(self):
-        assert CostAgent.model == "claude-sonnet-4-6"
+                assert CostAgent.model == "claude-opus-4-6"
 
     def test_temperature(self):
         assert CostAgent.temperature == 0.2

@@ -111,10 +111,10 @@ class TestAgentAttributes:
         assert SolutionAgent.agent_type == "solution"
 
     def test_model(self):
-        assert SolutionAgent.model == "claude-sonnet-4-6"
+        assert SolutionAgent.model == "claude-opus-4-6"
 
     def test_temperature(self):
         assert SolutionAgent.temperature == 0.4
 
     def test_max_tokens(self):
-        assert SolutionAgent.max_tokens == 12000
+        assert SolutionAgent.max_tokens == 16000

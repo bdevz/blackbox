@@ -85,7 +85,7 @@ class TestAgentAttributes:
         assert QualificationAgent.agent_type == "qualify"
 
     def test_model(self):
-        assert QualificationAgent.model == "claude-haiku-4-5-20251001"
+                assert QualificationAgent.model == "claude-opus-4-6"
 
     def test_temperature(self):
         assert QualificationAgent.temperature == 0.1

@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 class SolutionAgent(BaseAgent):
     agent_type = "solution"
-    model = "claude-sonnet-4-6"
+    model = "claude-opus-4-6"
     temperature = 0.4
-    max_tokens = 12000
+    max_tokens = 16000
 
     def _find_similar_proposals(self, rfp_brief: dict, db) -> list[dict]:
         """Query pgvector for similar past proposals using Voyage embeddings."""

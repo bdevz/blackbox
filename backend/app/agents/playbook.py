@@ -68,21 +68,64 @@ CONSULTADD_PROFILE = """## ConsultAdd Public Services — Company Profile
 - 15+ years serving state & local government
 - Inc. 5000 recognized, FAST 100 Asian American Business (2x)
 
-### Key Client References (reuse across proposals, match to RFP domain)
-**For IT/MSP:** Marin Housing Authority (94.7% SLA first response, 93% resolution,
-  zero critical incidents, 18-min avg helpdesk response, $243K/yr for 3 years)
-**For Cybersecurity:** City of Long Beach MS (Cybersecurity Grant Program),
-  Navajo Housing Authority (Cybersecurity Policy & Protocol)
-**For SharePoint/M365:** City of Sunnyvale CA, Raleigh-Durham Airport Authority NC,
-  City of Grand Rapids MI (Copilot M365 Implementation)
-**For Cloud/Migration:** City of San Carlos CA (SharePoint Migration),
-  Orange County CA (Cloud Marketplace, $5M+)
-**For ERP/Systems:** Greater Cleveland RTA (Oracle), Christopher Newport University (Workday),
-  NYC School Construction Authority ($3.5M Workday ERP)
-**For Data:** NY Dept of Financial Services (Data Governance Training),
-  North Dakota DPI (School Data Migration)
-**For Federal/Large:** Social Security Administration ($6.85M), USDA, SBA,
-  Port Authority NY/NJ (2 awards), LAUSD (2 awards)
+### Key Client References (ALWAYS use quantified metrics — never vague language)
+
+MANDATORY: Every past performance reference MUST include at least 2 specific metrics.
+NEVER write "successfully delivered" or "satisfied requirements" — always use numbers.
+
+**For IT/MSP:**
+- Marin Housing Authority, CA: 94.7% SLA first response, 93.0% SLA resolution,
+  zero critical (P1) incidents over 12 months, 18-min avg helpdesk response,
+  RPO achieved: 30 min (vs 2-hour requirement), $243K/yr for 3+2 year contract
+- City of Olmos Park, TX: $4,950/mo fixed retainer, 40 tickets/mo allocation,
+  4-hour Tier 1 response SLA, vCIO quarterly innovation reviews included
+- Macomb County, MI: CJIS-compliant MSP engagement, ongoing
+
+**For Cybersecurity:**
+- Navajo Housing Authority, AZ: Delivered cybersecurity policy framework in 3 weeks,
+  100% compliance on subsequent federal audit, awarded Feb 2026
+- City of Long Beach, MS: Cybersecurity Grant Program, best-qualified vendor selection,
+  SLCGP grant-funded, awarded Feb 2026
+- Iowa State University: Cybersecurity Services for Political Subdivisions, intent to award
+
+**For SharePoint/M365:**
+- Raleigh-Durham Airport Authority, NC: $18,830 fixed fee, delivered SharePoint
+  governance framework aligned with Vision 2040, first airport authority award
+- City of Sunnyvale, CA: SharePoint & OneDrive Migration, awarded Dec 2025
+- City of Grand Rapids, MI: Copilot M365 Implementation, awarded Jan 2026
+
+**For Cloud/Migration:**
+- City of San Carlos, CA: Legacy File Server to SharePoint Migration, awarded Oct 2025
+- Orange County, CA: Cloud Marketplace contract, $5M+ portfolio, 5-year term,
+  40% reduction in remittance errors, CJIS/HIPAA compliant
+
+**For ERP/Systems:**
+- Greater Cleveland RTA, OH: Oracle System Integration Testing, awarded Oct 2025
+- Christopher Newport University, VA: Workday Adaptive Planning, awarded Oct 2025
+- NYC School Construction Authority: $3.5M Workday ERP, 50% reduction in manual processes
+
+**For Data/Analytics:**
+- NY Dept of Financial Services: Data Governance Training, $5,800, 19 hours delivered,
+  awarded Nov 2024
+- North Dakota DPI: School Data Migration, direct implementation award, Aug 2025
+- NACCHO (DC): Custom JavaScript Programming, $9,345 (47% under NTE ceiling),
+  50% processing time reduction
+
+**For Federal/Large:**
+- Social Security Administration: $6.85M, 25% document inaccuracy reduction,
+  50% processing time reduction, CJIS/HIPAA compliant
+- SBA: 35% faster audit readiness, 50% reduction in downtime,
+  40% improvement in cyber detection
+- Port Authority NY/NJ: 2 awards (Aviation IT Consulting), $1.4M+
+- LAUSD: 2 awards (IT Infrastructure Bench + Software Application Services Bench)
+
+**For IT Consulting (general):**
+- City of Virginia Beach, VA: IT Consulting contract, awarded Jan 2026
+- New Castle County, DE: IT Services, first Delaware award, Dec 2025
+- Greene County, NY: Professional Consultant Roster, 3-year on-call
+- Santa Clara, CA: IT PM & Consulting, $5M task-order, 5-year term,
+  managing $15M+ in modernization projects
+- Florida DOR: Signed contract, direct implementation
 
 ### Sweet Spot
 $100K–$500K SLED contracts in IT professional services.
