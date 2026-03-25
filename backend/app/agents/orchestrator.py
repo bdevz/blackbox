@@ -106,9 +106,9 @@ def should_revise(state: ProposalState) -> str:
     recommendation = review.get("recommendation", "ready")
     revision_count = state.get("revision_count", 0)
 
-    if recommendation == "ready" or revision_count >= 2:
-        return "end"
-    return "revise"
+    # Skip revision loops — they compound drift across sections.
+    # The reconcile pass handles cross-section fixes in a single pass instead.
+    return "end"
 
 
 def _extract_affected_sections(review: dict) -> set[str]:
