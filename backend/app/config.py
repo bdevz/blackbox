@@ -21,7 +21,16 @@ class Settings(BaseSettings):
     s3_endpoint: str = ""
     voyage_api_key: str = ""
     voyage_model: str = "voyage-3-large"
+    # OpenAI embeddings (text-embedding-3-small, 1536-dim)
+    openai_api_key: str = ""
+    openai_embedding_model: str = "text-embedding-3-small"
+    # Pinecone vector store
+    pinecone_api_key: str = ""
+    pinecone_index_name: str = "rfp-blackbox"
+    pinecone_cloud: str = "aws"
+    pinecone_region: str = "us-east-1"
     max_concurrent_api_calls: int = 4
+    claude_model: str = "claude-sonnet-4-6"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

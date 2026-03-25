@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import logging
 import re
 import time
 from abc import ABC, abstractmethod
@@ -9,6 +10,8 @@ from anthropic import AsyncAnthropic
 
 from app.config import settings
 from app.models.database import SessionLocal, AgentRun
+
+logger = logging.getLogger(__name__)
 
 _api_semaphore = asyncio.Semaphore(settings.max_concurrent_api_calls)
 
@@ -26,7 +29,7 @@ class AgentResult:
 
 class BaseAgent(ABC):
     agent_type: str = "base"
-    model: str = "claude-sonnet-4-20250514"
+    model: str = settings.claude_model
     max_retries: int = 2
     temperature: float = 0.3
     max_tokens: int = 4096
@@ -82,16 +85,22 @@ class BaseAgent(ABC):
                     return text[start:i + 1]
         return text[start:]
 
-    def inject_context(self, context: dict, db=None) -> dict:
-        """Override to inject agent-specific data from DB."""
+    async def inject_context(self, context: dict, db=None) -> dict:
+        """Override to inject agent-specific data from DB and RAG retrieval."""
         return context
 
     async def run(self, context: dict, proposal_id: str = None) -> AgentResult:
+        tag = f"[{self.agent_type.upper()}]" + (f"[proposal={proposal_id[:8]}]" if proposal_id else "")
+        logger.info("%s Starting — model=%s", tag, self.model)
+
         db = SessionLocal()
         try:
-            context = self.inject_context(context, db)
+            context = await self.inject_context(context, db)
             system_prompt, user_prompt = self.build_prompt(context)
             prompt_hash = hashlib.sha256(system_prompt.encode()).hexdigest()[:16]
+
+            logger.info("%s Calling LLM — prompt_hash=%s, user_prompt_len=%d chars",
+                        tag, prompt_hash, len(user_prompt))
 
             async with _api_semaphore:
                 start = time.monotonic()
@@ -105,12 +114,27 @@ class BaseAgent(ABC):
                 duration_ms = int((time.monotonic() - start) * 1000)
 
             raw_text = response.content[0].text
+            logger.info("%s LLM responded — in=%d tokens, out=%d tokens, duration=%dms",
+                        tag, response.usage.input_tokens, response.usage.output_tokens, duration_ms)
+            logger.debug("%s Raw LLM output (first 500 chars): %s", tag, raw_text[:500])
+
             raw_text = self._extract_json(raw_text)
             output = self.validate_output(raw_text)
 
+            confidence = output.get("confidence", 0.0)
+            output_keys = list(output.keys())
+            logger.info("%s Output validated — confidence=%.2f, keys=%s", tag, confidence, output_keys)
+
+            # Log a brief preview of important output fields
+            for field in ("qualified", "recommendation", "approach", "narrative", "status"):
+                if field in output:
+                    val = output[field]
+                    preview = str(val)[:120] if isinstance(val, str) else val
+                    logger.info("%s   .%s = %s", tag, field, preview)
+
             result = AgentResult(
                 output=output,
-                confidence=output.get("confidence", 0.0),
+                confidence=confidence,
                 model=self.model,
                 prompt_hash=prompt_hash,
                 input_tokens=response.usage.input_tokens,
@@ -131,10 +155,14 @@ class BaseAgent(ABC):
                 )
                 db.add(run)
                 db.commit()
+                logger.info("%s AgentRun saved to DB — run_id=%s, status=ok", tag, run.id)
+            else:
+                logger.warning("%s No proposal_id provided — AgentRun NOT saved to DB", tag)
 
             return result
 
         except Exception as e:
+            logger.error("%s FAILED — %s: %s", tag, type(e).__name__, e, exc_info=True)
             if proposal_id:
                 run = AgentRun(
                     proposal_id=proposal_id,
@@ -146,6 +174,7 @@ class BaseAgent(ABC):
                 )
                 db.add(run)
                 db.commit()
+                logger.info("%s AgentRun(error) saved to DB — run_id=%s", tag, run.id)
             raise
         finally:
             db.close()

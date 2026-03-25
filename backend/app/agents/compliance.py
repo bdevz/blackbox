@@ -1,36 +1,48 @@
 import json
+import logging
 
 from app.agents.base import BaseAgent
 from app.agents.playbook import CONSULTADD_PROFILE, COMPLIANCE_RULES, CANONICAL_CITATIONS
+from app.config import settings
 from app.models.database import CompanyKnowledge
+
+logger = logging.getLogger(__name__)
 
 
 class ComplianceAgent(BaseAgent):
     agent_type = "comply"
-    model = "claude-opus-4-6"
+    model = settings.claude_model
     temperature = 0.2
     max_tokens = 12000
 
-    def inject_context(self, context: dict, db=None) -> dict:
-        if db is None:
-            return context
+    async def inject_context(self, context: dict, db=None) -> dict:
+        # ── SQL: structured cert/boilerplate lookup ──
+        if db is not None:
+            rows = (
+                db.query(CompanyKnowledge)
+                .filter(CompanyKnowledge.type.in_(["cert", "certification", "boilerplate"]))
+                .all()
+            )
+            certs, boilerplate = [], []
+            for r in rows:
+                entry = {"type": r.type, "key": r.key, "value": r.value}
+                (boilerplate if r.type == "boilerplate" else certs).append(entry)
+            context["certifications"] = certs
+            context["boilerplate"] = boilerplate
 
-        rows = (
-            db.query(CompanyKnowledge)
-            .filter(CompanyKnowledge.type.in_(["cert", "certification", "boilerplate"]))
-            .all()
-        )
-        certs = []
-        boilerplate = []
-        for r in rows:
-            entry = {"type": r.type, "key": r.key, "value": r.value}
-            if r.type == "boilerplate":
-                boilerplate.append(entry)
-            else:
-                certs.append(entry)
+        # ── RAG: similar winning compliance sections + certs knowledge base ──
+        rag_ctx = context.pop("rag_context", {})
+        if rag_ctx:
+            context["rag_results"] = rag_ctx
+        else:
+            try:
+                from app.services.rag_retriever import retrieve_for_agent
+                rfp_text = json.dumps(context.get("rfp_brief", {}))
+                context["rag_results"] = await retrieve_for_agent("comply", rfp_text)
+            except Exception as e:
+                logger.warning(f"ComplianceAgent RAG retrieval failed: {e}")
+                context["rag_results"] = {}
 
-        context["certifications"] = certs
-        context["boilerplate"] = boilerplate
         return context
 
     def build_prompt(self, context: dict) -> tuple[str, str]:
@@ -72,10 +84,15 @@ Respond with ONLY valid JSON (no markdown fences):
   "confidence": 0.0-1.0
 }}"""
 
+        from app.services.rag_retriever import format_rag_context_for_prompt
+
         rfp_brief = context.get("rfp_brief", {})
         qualification = context.get("qualification", {})
         certs = context.get("certifications", [])
         boilerplate = context.get("boilerplate", [])
+        rag_section = format_rag_context_for_prompt(
+            context.get("rag_results", {}), agent_type="comply"
+        )
 
         solution = context.get("solution", {})
         staffing_plan = solution.get("staffing_plan", "") if solution else ""
@@ -102,7 +119,7 @@ Use the exact same names, certifications, and titles from the solution section.
 
 ## Available Boilerplate Text
 {json.dumps(boilerplate, indent=2) if boilerplate else "No boilerplate available."}
-
+{rag_section}
 Write the compliance narrative for this RFP."""
 
         review_feedback = context.get("review_feedback")

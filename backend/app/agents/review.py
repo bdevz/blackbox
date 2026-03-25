@@ -2,11 +2,12 @@ import json
 
 from app.agents.base import BaseAgent
 from app.agents.playbook import REVIEW_RULES
+from app.config import settings
 
 
 class ReviewAgent(BaseAgent):
     agent_type = "review"
-    model = "claude-opus-4-6"
+    model = settings.claude_model
     temperature = 0.1
     max_tokens = 12000
 

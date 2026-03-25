@@ -8,3 +8,4 @@ dist/
 *.egg-info/
 etl/output/*.json
 .DS_Store
+venv/

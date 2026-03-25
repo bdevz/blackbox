@@ -4,58 +4,41 @@ import logging
 from app.agents.base import BaseAgent
 from app.agents.playbook import CONSULTADD_PROFILE, SOLUTION_RULES, CANONICAL_CITATIONS
 from app.config import settings
-from app.models.database import CompanyKnowledge, ProposalEmbedding
+from app.models.database import CompanyKnowledge
 
 logger = logging.getLogger(__name__)
 
 
 class SolutionAgent(BaseAgent):
     agent_type = "solution"
-    model = "claude-opus-4-6"
+    model = settings.claude_model
     temperature = 0.4
     max_tokens = 16000
 
-    def _find_similar_proposals(self, rfp_brief: dict, db) -> list[dict]:
-        """Query pgvector for similar past proposals using Voyage embeddings."""
-        if not settings.voyage_api_key:
-            return []  # Skip entirely if no API key — avoids timeout
-        try:
-            import voyageai
-
-            vo = voyageai.Client(api_key=settings.voyage_api_key)
-            brief_text = json.dumps(rfp_brief)
-            embedding_result = vo.embed([brief_text], model=settings.voyage_model)
-            query_vector = embedding_result.embeddings[0]
-
-            results = (
-                db.query(ProposalEmbedding)
-                .order_by(ProposalEmbedding.embedding.cosine_distance(query_vector))
-                .limit(3)
+    async def inject_context(self, context: dict, db=None) -> dict:
+        # ── SQL: structured company knowledge (capabilities, references, rate cards) ──
+        if db is not None:
+            rows = (
+                db.query(CompanyKnowledge)
+                .filter(CompanyKnowledge.type.in_(["capability", "reference", "ratecard"]))
                 .all()
             )
-            return [
-                {"section": r.section, "proposal_id": str(r.proposal_id)}
-                for r in results
+            context["company_knowledge"] = [
+                {"type": r.type, "key": r.key, "value": r.value} for r in rows
             ]
-        except Exception as e:
-            logger.warning(f"Similar proposal lookup failed: {e}")
-            return []
 
-    def inject_context(self, context: dict, db=None) -> dict:
-        if db is None:
-            return context
-
-        rows = (
-            db.query(CompanyKnowledge)
-            .filter(CompanyKnowledge.type.in_(["capability", "reference", "ratecard"]))
-            .all()
-        )
-        context["company_knowledge"] = [
-            {"type": r.type, "key": r.key, "value": r.value} for r in rows
-        ]
-
-        rfp_brief = context.get("rfp_brief", {})
-        context["similar_proposals"] = self._find_similar_proposals(rfp_brief, db)
+        # ── RAG: similar winning proposals + knowledge base (replaces Voyage+pgvector) ──
+        rag_ctx = context.pop("rag_context", {})
+        if rag_ctx:
+            context["rag_results"] = rag_ctx
+        else:
+            try:
+                from app.services.rag_retriever import retrieve_for_agent
+                rfp_text = json.dumps(context.get("rfp_brief", {}))
+                context["rag_results"] = await retrieve_for_agent("solution", rfp_text)
+            except Exception as e:
+                logger.warning(f"SolutionAgent RAG retrieval failed: {e}")
+                context["rag_results"] = {}
 
         return context
 
@@ -97,10 +80,14 @@ Respond with ONLY valid JSON (no markdown fences):
   "confidence": 0.0-1.0
 }}"""
 
+        from app.services.rag_retriever import format_rag_context_for_prompt
+
         rfp_brief = context.get("rfp_brief", {})
         qualification = context.get("qualification", {})
         knowledge = context.get("company_knowledge", [])
-        similar = context.get("similar_proposals", [])
+        rag_section = format_rag_context_for_prompt(
+            context.get("rag_results", {}), agent_type="solution"
+        )
 
         user = f"""## RFP Brief
 {json.dumps(rfp_brief, indent=2)}
@@ -110,10 +97,7 @@ Respond with ONLY valid JSON (no markdown fences):
 
 ## ConsultAdd Capabilities & References
 {json.dumps(knowledge, indent=2)}
-
-## Similar Past Proposals
-{json.dumps(similar, indent=2) if similar else "No similar proposals found."}
-
+{rag_section}
 Write the technical solution for this RFP."""
 
         review_feedback = context.get("review_feedback")
