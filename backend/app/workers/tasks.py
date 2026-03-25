@@ -1,9 +1,12 @@
 import asyncio
+import logging
 
 from celery import Celery
 from sqlalchemy.orm import joinedload
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 celery_app = Celery("blackbox", broker=settings.redis_url, backend=settings.redis_url)
 celery_app.conf.update(
@@ -44,13 +47,34 @@ def generate_proposal_task(self, proposal_id: str):
             "rfp_brief": proposal.rfp.extracted_brief,
             "proposal_id": str(proposal.id),
         }
+        logger.info("[TASK] Invoking LangGraph pipeline — proposal=%s", proposal_id)
         result = asyncio.run(proposal_graph.ainvoke(initial_state))
+        logger.info("[TASK] Pipeline finished — final_status=%s, keys=%s",
+                    result.get("status"), list(result.keys()))
 
-        proposal.qualification_result = result.get("qualification")
-        proposal.solution_section = result.get("solution", {}).get("approach", "")
-        proposal.compliance_section = result.get("compliance", {}).get("narrative", "")
-        proposal.cost_section = result.get("cost")
-        proposal.review_result = result.get("review")
+        # Log what we got back before saving
+        qual = result.get("qualification")
+        sol = result.get("solution", {})
+        comp = result.get("compliance", {})
+        cost = result.get("cost")
+        rev = result.get("review")
+
+        logger.info("[TASK] Saving to DB — proposal=%s", proposal_id)
+        logger.info("[TASK]   qualification_result: %s", "PRESENT" if qual else "MISSING")
+        logger.info("[TASK]   solution_section (approach): %d chars",
+                    len(sol.get("approach", "")) if sol else 0)
+        logger.info("[TASK]   compliance_section (narrative): %d chars",
+                    len(comp.get("narrative", "")) if comp else 0)
+        logger.info("[TASK]   cost_section: %s", "PRESENT" if cost else "MISSING")
+        logger.info("[TASK]   review_result: recommendation=%s, quality_score=%s",
+                    rev.get("recommendation") if rev else None,
+                    rev.get("quality_score") if rev else None)
+
+        proposal.qualification_result = qual
+        proposal.solution_section = sol.get("approach", "") if sol else ""
+        proposal.compliance_section = comp.get("narrative", "") if comp else ""
+        proposal.cost_section = cost
+        proposal.review_result = rev
         proposal.status = "draft"
 
         # Assemble document
@@ -74,10 +98,17 @@ def generate_proposal_task(self, proposal_id: str):
                 boilerplate=boilerplate,
             )
         except Exception as assembly_err:
-            import logging
-            logging.getLogger(__name__).warning(f"Assembly failed: {assembly_err}")
+            logger.warning("[TASK] Assembly failed for proposal %s: %s", proposal_id, assembly_err)
 
         db.commit()
+        logger.info("[TASK] DB commit SUCCESS — proposal=%s status=draft", proposal_id)
+
+        # Index proposal into Pinecone immediately after draft is saved
+        try:
+            from app.services.rag_indexer import index_proposal
+            asyncio.run(index_proposal(proposal_id, db))
+        except Exception as idx_err:
+            logger.warning("[TASK] Pinecone indexing failed for proposal %s: %s", proposal_id, idx_err)
 
         return {"proposal_id": proposal_id, "status": "draft"}
 
@@ -143,6 +174,13 @@ def ingest_rfp_task(rfp_id: str, file_content_b64: str = None, filename: str = N
         rfp.ingested_at = datetime.now(timezone.utc)
         db.commit()
 
+        # Index RFP into Pinecone immediately after ingestion
+        try:
+            from app.services.rag_indexer import index_rfp
+            asyncio.run(index_rfp(rfp_id, db))
+        except Exception as idx_err:
+            logger.warning("[TASK] Pinecone indexing failed for RFP %s: %s", rfp_id, idx_err)
+
         return {"rfp_id": rfp_id, "status": "ingested", "title": brief.get("title")}
 
     except Exception as e:
@@ -168,9 +206,39 @@ def sync_hubspot_outcomes_task():
 
 @celery_app.task
 def embed_winning_proposals_task():
-    """Periodic task: embed winning proposals for similarity search."""
+    """Periodic task: embed winning proposals for similarity search.
+
+    Runs the legacy Voyage+pgvector pipeline AND indexes to Pinecone.
+    """
     from app.integrations.embedding_pipeline import embed_winning_proposals
-    return embed_winning_proposals()
+    pgvector_result = embed_winning_proposals()
+
+    # Also index any won/lost proposals not yet in Pinecone
+    try:
+        from app.models.database import SessionLocal, Proposal
+        from app.services.rag_indexer import index_proposal
+
+        db = SessionLocal()
+        try:
+            proposals = (
+                db.query(Proposal)
+                .filter(Proposal.outcome.in_(["won", "lost"]))
+                .filter(Proposal.solution_section.isnot(None))
+                .all()
+            )
+            indexed = 0
+            for p in proposals:
+                try:
+                    count = asyncio.run(index_proposal(str(p.id), db))
+                    indexed += count
+                except Exception:
+                    pass
+        finally:
+            db.close()
+
+        return {**pgvector_result, "pinecone_vectors": indexed}
+    except Exception as e:
+        return {**pgvector_result, "pinecone_error": str(e)}
 
 
 @celery_app.task

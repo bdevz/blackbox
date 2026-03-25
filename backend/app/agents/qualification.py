@@ -1,9 +1,12 @@
 import json
+import logging
 
 from app.agents.base import BaseAgent
 from app.agents.playbook import CONSULTADD_PROFILE, QUALIFICATION_RULES
+from app.config import settings
 from app.models.database import CompanyKnowledge
 
+logger = logging.getLogger(__name__)
 
 # Re-export for backward compatibility (other agents import from here)
 CONSULTADD_CONTEXT = CONSULTADD_PROFILE
@@ -11,20 +14,35 @@ CONSULTADD_CONTEXT = CONSULTADD_PROFILE
 
 class QualificationAgent(BaseAgent):
     agent_type = "qualify"
-    model = "claude-opus-4-6"
+    model = settings.claude_model
     temperature = 0.1
 
-    def inject_context(self, context: dict, db=None) -> dict:
-        if db is None:
-            return context
-        rows = (
-            db.query(CompanyKnowledge)
-            .filter(CompanyKnowledge.type.in_(["cert", "certification", "capability"]))
-            .all()
-        )
-        context["company_qualifications"] = [
-            {"type": r.type, "key": r.key, "value": r.value} for r in rows
-        ]
+    async def inject_context(self, context: dict, db=None) -> dict:
+        # ── SQL: structured cert/capability lookup (deterministic matching) ──
+        if db is not None:
+            rows = (
+                db.query(CompanyKnowledge)
+                .filter(CompanyKnowledge.type.in_(["cert", "certification", "capability"]))
+                .all()
+            )
+            context["company_qualifications"] = [
+                {"type": r.type, "key": r.key, "value": r.value} for r in rows
+            ]
+
+        # ── RAG: semantic retrieval from pre-fetched context or live query ──
+        rag_ctx = context.pop("rag_context", {})
+        if rag_ctx:
+            context["rag_results"] = rag_ctx
+        else:
+            # Fallback: live retrieval if prefetch wasn't run
+            try:
+                from app.services.rag_retriever import retrieve_for_agent
+                rfp_text = json.dumps(context.get("rfp_brief", {}))
+                context["rag_results"] = await retrieve_for_agent("qualify", rfp_text)
+            except Exception as e:
+                logger.warning(f"QualificationAgent RAG retrieval failed: {e}")
+                context["rag_results"] = {}
+
         return context
 
     def build_prompt(self, context: dict) -> tuple[str, str]:
@@ -51,18 +69,24 @@ Respond with ONLY valid JSON (no markdown fences):
   "recommendation": "go" | "no-go" | "conditional"
 }}"""
 
+        from app.services.rag_retriever import format_rag_context_for_prompt
+
         quals = context.get("company_qualifications", [])
         quals_text = json.dumps(quals, indent=2) if quals else "No qualification data available."
 
         rfp_brief = context.get("rfp_brief", {})
         rfp_text = json.dumps(rfp_brief, indent=2)
 
+        rag_section = format_rag_context_for_prompt(
+            context.get("rag_results", {}), agent_type="qualify"
+        )
+
         user = f"""## RFP Brief
 {rfp_text}
 
 ## ConsultAdd's Current Qualifications
 {quals_text}
-
+{rag_section}
 Evaluate whether ConsultAdd should bid on this RFP."""
 
         return system, user

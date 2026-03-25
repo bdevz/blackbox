@@ -1,15 +1,18 @@
 import json
+import logging
 
 from app.agents.base import BaseAgent
 from app.agents.playbook import CONSULTADD_PROFILE, COST_RULES
+from app.config import settings
 from app.models.database import CompanyKnowledge
 
+logger = logging.getLogger(__name__)
 DEFAULT_MARGIN = 0.15
 
 
 class CostAgent(BaseAgent):
     agent_type = "cost"
-    model = "claude-opus-4-6"
+    model = settings.claude_model
     temperature = 0.2
     max_tokens = 12000
 
@@ -115,45 +118,46 @@ class CostAgent(BaseAgent):
 
         return result
 
-    def inject_context(self, context: dict, db=None) -> dict:
-        if db is None:
-            return context
+    async def inject_context(self, context: dict, db=None) -> dict:
+        # ── SQL: rate cards + competitor intel (deterministic cost calculation) ──
+        rate_card: dict = {}
+        competitor_avg = None
 
-        rows = (
-            db.query(CompanyKnowledge)
-            .filter(CompanyKnowledge.type.in_(["ratecard", "rate"]))
-            .all()
-        )
+        if db is not None:
+            rows = (
+                db.query(CompanyKnowledge)
+                .filter(CompanyKnowledge.type.in_(["ratecard", "rate"]))
+                .all()
+            )
+            for r in rows:
+                if r.type == "ratecard" and isinstance(r.value, dict):
+                    rate_card.update(r.value.get("rates", {}))
+                elif r.type == "rate" and isinstance(r.value, dict):
+                    rate_card[r.key] = r.value
 
-        rate_card = {}
-        for r in rows:
-            if r.type == "ratecard" and isinstance(r.value, dict):
-                rate_card.update(r.value.get("rates", {}))
-            elif r.type == "rate" and isinstance(r.value, dict):
-                rate_card[r.key] = r.value
+            rfp_brief = context.get("rfp_brief", {})
+            rfp_id = context.get("rfp_id") or rfp_brief.get("rfp_id")
+            if rfp_id:
+                from app.models.database import CompetitorIntel
+                competitors = db.query(CompetitorIntel).filter(
+                    CompetitorIntel.rfp_id == rfp_id
+                ).all()
+                if competitors:
+                    values = [float(c.past_contract_value) for c in competitors if c.past_contract_value]
+                    competitor_avg = sum(values) / len(values) if values else None
+                    context["competitor_intel"] = [
+                        {
+                            "name": c.competitor_name,
+                            "value": float(c.past_contract_value) if c.past_contract_value else None,
+                        }
+                        for c in competitors
+                    ]
 
         context["rate_card"] = rate_card
 
-        # Extract estimated_value from RFP brief
         rfp_brief = context.get("rfp_brief", {})
         estimated_value = rfp_brief.get("estimated_value")
         context["estimated_value"] = float(estimated_value) if estimated_value else None
-
-        # Fetch competitor intel
-        from app.models.database import CompetitorIntel
-        rfp_id = context.get("rfp_id") or rfp_brief.get("rfp_id")
-        competitor_avg = None
-        if rfp_id:
-            competitors = db.query(CompetitorIntel).filter(
-                CompetitorIntel.rfp_id == rfp_id
-            ).all()
-            if competitors:
-                values = [float(c.past_contract_value) for c in competitors if c.past_contract_value]
-                competitor_avg = sum(values) / len(values) if values else None
-                context["competitor_intel"] = [
-                    {"name": c.competitor_name, "value": float(c.past_contract_value) if c.past_contract_value else None}
-                    for c in competitors
-                ]
 
         solution = context.get("solution", {})
         staffing = solution.get("staffing", [])
@@ -165,6 +169,19 @@ class CostAgent(BaseAgent):
         )
         context["computed_costs"] = computed
         self._computed_costs = computed
+
+        # ── RAG: winning cost narratives + competitor intel from Pinecone ──
+        rag_ctx = context.pop("rag_context", {})
+        if rag_ctx:
+            context["rag_results"] = rag_ctx
+        else:
+            try:
+                from app.services.rag_retriever import retrieve_for_agent
+                rfp_text = json.dumps(rfp_brief)
+                context["rag_results"] = await retrieve_for_agent("cost", rfp_text)
+            except Exception as e:
+                logger.warning(f"CostAgent RAG retrieval failed: {e}")
+                context["rag_results"] = {}
 
         return context
 
@@ -215,11 +232,16 @@ Respond with ONLY valid JSON (no markdown fences):
 
 IMPORTANT: The labor_costs roles, rates, hours, totals, and subtotal MUST match the pre-computed values exactly. You may add other_costs for non-labor items."""
 
+        from app.services.rag_retriever import format_rag_context_for_prompt
+
         rfp_brief = context.get("rfp_brief", {})
         solution = context.get("solution", {})
         computed = context.get("computed_costs", {})
         estimated_value = context.get("estimated_value")
         competitor_intel = context.get("competitor_intel", [])
+        rag_section = format_rag_context_for_prompt(
+            context.get("rag_results", {}), agent_type="cost"
+        )
 
         user = f"""## RFP Brief
 {json.dumps(rfp_brief, indent=2)}
@@ -243,6 +265,11 @@ Estimated RFP value: ${estimated_value:,.2f}
 ## Competitor Intelligence
 {json.dumps(competitor_intel, indent=2)}
 Position our pricing as competitive against these competitors."""
+
+        if rag_section:
+            user += f"""
+
+{rag_section}"""
 
         user += """
 

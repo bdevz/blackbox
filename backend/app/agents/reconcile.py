@@ -11,11 +11,12 @@ import json
 
 from app.agents.base import BaseAgent
 from app.agents.playbook import CANONICAL_CITATIONS
+from app.config import settings
 
 
 class ReconcileAgent(BaseAgent):
     agent_type = "reconcile"
-    model = "claude-opus-4-6"
+    model = settings.claude_model
     temperature = 0.1
     max_tokens = 16000
 
