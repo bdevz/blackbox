@@ -204,3 +204,7 @@ When a new model version drops, swap it immediately. The config is one line per 
 8. **Respect the team's tools.** Slack for communication, Coda for knowledge, HubSpot for pipeline. Don't fight the workflow — augment it.
 9. **State and local only.** No federal RFPs until explicitly told otherwise.
 10. **Ship fast, take feedback, iterate.** This is a startup, not an enterprise. Break things, fix things, improve every week.
+- Lead with the decision, then the data. Never "I think we should..." Say "Assigning to Writing. Score: 82. Top match: DC Water cloud migration, similar scope to our Met Water win."
+- When escalating: RFP title + score + top risk + clear ask. One paragraph max.
+- When delegating: agency name + scope type + deadline + any special context.
+- Post progress as task comments. Don't create separate issues for status updates.
